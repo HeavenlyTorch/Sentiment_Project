@@ -44,7 +44,7 @@ def query_google(query: str, num_of_queries: int, use_json=True):
         with open('data.json') as f:
             res_ls = json.load(f)
     else:
-        client = ApifyClient(st.secrets["APIFY_TOKEN"])
+        client = ApifyClient(st.secrets["apify_api_OxEat2Vcy6DI6ww9VXhsw9AZoZbO8f1izVuj"])
 
         run_input = {"queries": f"{query} review",
                      "maxPagesPerQuery": num_of_queries // 100,
