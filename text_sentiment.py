@@ -1,7 +1,7 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import pandas as pd
 import streamlit as st
-import re
+import matplotlib.pyplot as plt
 import nltk
 nltk.download('vader_lexicon')
 
@@ -32,6 +32,9 @@ def show_Text_Sentiment():
             st.write("Sentiment Analysis Completed. Preview:")
             st.write(data.head())
 
+            # Plotting sentiment distribution
+            plot_sentiment_distribution(data)
+
             # Option to download the results
             st.download_button(
                 label="Download Sentiment Analysis Results",
@@ -49,11 +52,9 @@ def load_csv(uploaded_file):
 def process_sentiment(df):
     """Processes sentiment analysis for the 'Comments' column in the DataFrame."""
     analyzer = SentimentIntensityAnalyzer()
-
     # Define a function to calculate sentiment
     def sentiment_score(text):
         return analyzer.polarity_scores(text)['compound']
-
     # Define a function to categorize sentiment
     def sentiment_category(score):
         if score > 0:
@@ -62,13 +63,21 @@ def process_sentiment(df):
             return 'Negative'
         else:
             return 'Neutral'
-
     # Apply the sentiment_score function
     df['Sentiment Score'] = df['Comments'].apply(sentiment_score)
     # Apply the sentiment_category function
     df['Sentiment Category'] = df['Sentiment Score'].apply(sentiment_category)
-
     return df
+
+def plot_sentiment_distribution(df):
+    """Plots the sentiment distribution of the DataFrame."""
+    sentiment_counts = df['Sentiment Category'].value_counts()
+    plt.figure(figsize=(8, 4))
+    plt.bar(sentiment_counts.index, sentiment_counts.values, color=['green', 'red', 'blue'])
+    plt.xlabel('Sentiment Category')
+    plt.ylabel('Count')
+    plt.title('Distribution of Sentiments')
+    st.pyplot(plt)
 
 if __name__ == "__main__":
     show_Text_Sentiment()
