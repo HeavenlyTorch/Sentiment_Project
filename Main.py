@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Import the scraper_visual as a module if it's in a different file
-import sentiment
+import scraper_visual
 
 def scraper():
     st.title('Review Scraper')
