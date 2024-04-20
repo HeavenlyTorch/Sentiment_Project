@@ -45,7 +45,7 @@ if query_usage:
         st.write(scraper.query_for_usage())
 
 form = st.form(key='main_form')
-item = form.text_input('Enter an item (product, movie, etc.) to search for reviews: ', value='PS5 Console')
+item = form.text_input('Enter an item (product, movie, etc.) to search for reviews: ', value='')
 num_of_queries = form.slider('Number of queries: ', min_value=100, max_value=1000, value=100, step=100)
 submit = form.form_submit_button('Search')
 if submit or st.session_state.load_state:
