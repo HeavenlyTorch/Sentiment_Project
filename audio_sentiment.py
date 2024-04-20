@@ -21,6 +21,7 @@ def plot_waveform(data, sample_rate):
     plt.ylabel('Amplitude')
     plt.tight_layout()
     st.pyplot(plt)
+    plt.show()
 
 def analyze_sentiment(audio_data):
     """Placeholder function to analyze sentiment."""
