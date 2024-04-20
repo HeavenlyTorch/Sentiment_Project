@@ -3,10 +3,6 @@ import streamlit as st
 # Import the scraper_visual as a module if it's in a different file
 import scraper_visual
 
-def scraper():
-    st.title('Review Scraper')
-    st.write('Welcome to Review Scraper')
-
 def Text_Sentiment():
     st.title('Text Sentiment')
     st.write('Welcome to Text Sentiment')
@@ -21,7 +17,7 @@ def Video_Sentiment():
 
 # Dictionary
 pages = {
-    "Review Scraper": scraper,
+    "Review Scraper": scraper_visual.display_scraper_page,
     "Text Sentiment": Text_Sentiment,
     "Audio Sentiment": Audio_sentiment,
     "Video Sentiment": Video_Sentiment
@@ -41,4 +37,4 @@ if page == 'Home':
     st.title('Home Page')
     st.write('Welcome to the Home Page. Please select a page from the sidebar.')
 else:
-    pages[page]()  # Call the function that renders the chosen page
+    pages[page]()   # Call the function that renders the chosen page
