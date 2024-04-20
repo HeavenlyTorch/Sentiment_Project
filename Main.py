@@ -4,10 +4,6 @@ import streamlit as st
 from scraper_visual import show_scraper_visual
 from text_sentiment import show_Text_Sentiment
 
-def Text_Sentiment():
-    st.title('Text Sentiment')
-    st.write('Welcome to Text Sentiment')
-
 def Audio_sentiment():
     st.title('Audio Sentiment')
     st.write('Welcome to Audio Sentiment')

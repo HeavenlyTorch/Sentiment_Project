@@ -4,68 +4,12 @@ import streamlit as st
 import re
 import nltk
 nltk.download('vader_lexicon')
-from nltk.metrics import edit_distance
 
 def show_Text_Sentiment():
-    #my list of branches/departments/agency
-    word_list=[
-        "ABERGAVENNY",
-        "ABERTILLERY",
-        "BLACKOOD",
-        "CLEVEDON",
-        "GRIFFITHSTOWN",
-        "HEREFORD",
-        "KENFIG HILL",
-        "PENARTH",
-        "PORTISHEAD",
-        "USK",
-        "ROSS ON WYE",
-        "WHITCHURCH",
-        "NEWPORT",
-        "CAERLEON ROAD",
-        "SWANSEA",
-        "CWMBRAN",
-        "HANDPOST",
-        "23",
-        "63",
-        "34",
-        "58",
-        "RISCA",
-        "HEAD OFFICE",
-        "CALDICOT",
-        "MONMOUTH",
-        "CHEPSTOW",
-        "HO",
-        "BIRCHGROVE",
-        "BRECON",
-        "CARDIFF",
-        "ONLINE",
-        "POSTAL",
-        "SAVINGS & CUSTOMER CONTACT",
-        "DIRECT MORTGAGE SALES",
-        "DIRECT SALES",
-        "LENDING OPERATIONS",
-        "BUSINESS DEVELOPMENT",
-        "BANKING HALL",
-        "BDA",
-        "BRANCHES",
-        "BROKER DEVELOPMENT",
-        "COMMUNICATIONS",
-        "CREDIT CONTROL",
-        "CSS",
-        "FASTER PAYMENTS",
-        "MY ACCOUNTS",
-        "PRODUCTS",
-        "SCC",
-        "QA",
-        "Mortgage servicing"
-    ]
-
     analyzer = SentimentIntensityAnalyzer()
-
     st.header("Sentiment Analysis")
 
-    #analyse text
+    # Analyze individual text
     with st.expander("Analyze Text"):
         text = st.text_input('Text here: ')
         if text:
@@ -75,80 +19,56 @@ def show_Text_Sentiment():
             st.write('Polarity:', round(polarity, 2))
             st.write('Sentiment:', sentiment_label)
 
-    # with csv
+    # File uploader for CSV analysis
+    uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
+    if uploaded_file is not None:
+        data = load_csv(uploaded_file)
+        if 'Comments' in data.columns:
+            st.write("Preview of uploaded data:")
+            st.write(data.head())
 
-    with st.expander("Analyze csv"):
-        upl = st.file_uploader('Upload csv file')
+            # Processing sentiment analysis
+            data = process_sentiment(data)
+            st.write("Sentiment Analysis Completed. Preview:")
+            st.write(data.head())
 
-        def score(x):
-            sentiment_scores = analyzer.polarity_scores(x)
-            return sentiment_scores['compound']
+            # Option to download the results
+            st.download_button(
+                label="Download Sentiment Analysis Results",
+                data=data.to_csv(index=False).encode('utf-8'),
+                file_name='sentiment_analysis_results.csv',
+                mime='text/csv'
+            )
+        else:
+            st.error("CSV does not contain 'Comments' column. Please upload a CSV with the required column.")
 
-        def analyse(x):
-            polarity = x
-            return 'Positive' if polarity > 0 else ('Negative' if polarity < 0 else 'Neutral')
+def load_csv(uploaded_file):
+    """Loads a CSV file into a DataFrame."""
+    return pd.read_csv(uploaded_file)
 
-            #interest word is coming for the rate and hence it is not a +ve word so replacing this word with just rate
-            #as this interest word is causing problem
-        def replace_interest_rate(text):
-            return re.sub(r'\binterest \b', 'rate', text)
+def process_sentiment(df):
+    """Processes sentiment analysis for the 'Comments' column in the DataFrame."""
+    analyzer = SentimentIntensityAnalyzer()
 
-        if upl:
-            df = pd.read_csv(upl)
+    # Define a function to calculate sentiment
+    def sentiment_score(text):
+        return analyzer.polarity_scores(text)['compound']
 
-            df['Comments1'] = df['Comments'].apply(replace_interest_rate)
+    # Define a function to categorize sentiment
+    def sentiment_category(score):
+        if score > 0:
+            return 'Positive'
+        elif score < 0:
+            return 'Negative'
+        else:
+            return 'Neutral'
 
-            df['score'] = df['Comments1'].apply(score)
-            df['Sentiment'] = df['score'].apply(analyse)
+    # Apply the sentiment_score function
+    df['Sentiment Score'] = df['Comments'].apply(sentiment_score)
+    # Apply the sentiment_category function
+    df['Sentiment Category'] = df['Sentiment Score'].apply(sentiment_category)
 
-            #get positive words if sentiment is positive, negative words if sentiment is neg, otherwise []
-            def get_words(text, sentiment):
-                words = text.split()
-                if sentiment == 'Positive':
-                    words = [word for word in words if analyzer.polarity_scores(word)['compound'] > 0]
-                    return words
-                elif sentiment == 'Negative':
-                    words = [word for word in words if analyzer.polarity_scores(word)['compound'] < 0]
-                    return words
-                else:
-                    words = [word for word in words if analyzer.polarity_scores(word)['compound'] == 0]
-                    return words
+    return df
 
-            df['main_words']=df.apply(lambda row: get_words(row['Comments1'], row['Sentiment']), axis=1)
-
-            #get similar words-for branch/agency list
-            def find_similar_word(phrase,phrase_list):
-                if pd.isnull(phrase):
-                    return phrase
-
-                min_distance = float('inf')
-                closest_phrase = phrase
-
-                for ph in phrase_list:
-                    distance = edit_distance(phrase.lower(), ph.lower())
-                    if distance < min_distance:
-                        min_distance = distance
-                        closest_phrase = ph
-                if min_distance >= len(phrase):
-                    return phrase
-                else:
-                    return closest_phrase
-
-            df['branch_ag_dept'] = df['Branch/Agency/Department'].apply(lambda x: find_similar_word(x,word_list))
-
-            def replace_specific_words(phrase):
-                if isinstance(phrase, str) and ("newport" in phrase.lower() or "ho" in phrase.lower() or "head office" in phrase.lower()):
-                    return "Head Office"
-                return phrase
-
-            df['branch_ag_dept'] = df['branch_ag_dept'].apply(replace_specific_words)
-            df.drop('Comments1',axis=1,inplace=True)
-            st.write(df.head(10))
-
-            @st.cache_data
-            def convert_df(df):
-                return df.to_csv(index=False).encode('utf-8')
-
-            csv = convert_df(df)
-
-            st.download_button(label='Download csv', data=csv, file_name='sentiment.csv', mime='text/csv')
+if __name__ == "__main__":
+    show_Text_Sentiment()
