@@ -1,6 +1,6 @@
 import streamlit as st
 
-import scraper
+import scraper_visual
 
 def scraper():
     st.title('Review Scraper')
