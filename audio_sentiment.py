@@ -35,7 +35,7 @@ def save_audio(audio):
     return tfile.name
 
 
-def main():
+def show_audio_sentiment():
     st.title('Live Audio Recording and Analysis')
 
     if st.button('Record Audio'):
