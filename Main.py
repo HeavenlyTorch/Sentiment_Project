@@ -20,10 +20,10 @@ def Video_Sentiment():
 
 # Dictionary of pages
 pages = {
-    "Review Scraper": scraper.show,
-    "Text Sentiment": Text_Sentiment.show,
-    "Audio Sentiment": Audio_sentiment.show,
-    "Video Sentiment": Video_Sentiment.show,
+    "Review Scraper": scraper,
+    "Text Sentiment": Text_Sentiment,
+    "Audio Sentiment": Audio_sentiment,
+    "Video Sentiment": Video_Sentiment,
 }
 
 # Initialize session state
