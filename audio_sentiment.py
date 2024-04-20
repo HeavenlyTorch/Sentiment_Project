@@ -3,6 +3,7 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 def load_audio(audio_file):
     """Load audio file with librosa."""
@@ -17,7 +18,7 @@ def plot_waveform(data, sample_rate):
     plt.xlabel('Time (s)')
     plt.ylabel('Amplitude')
     plt.tight_layout()
-    return plt
+    st.pyplot(plt)
 
 def analyze_sentiment(audio_data):
     """Placeholder function to analyze sentiment."""
@@ -33,8 +34,7 @@ def show_audio_sentiment():
     if uploaded_file is not None:
         data, rate = load_audio(uploaded_file)
         st.audio(uploaded_file)
-        plt = plot_waveform(data, rate)
-        st.pyplot(plt)
+        plot_waveform(data, rate)
         sentiment = analyze_sentiment(data)
         st.write(f"Sentiment score: {sentiment:.2f}")
 
@@ -55,3 +55,6 @@ def show_audio_sentiment():
         ax.set_xlabel('File Index')
         ax.set_ylabel('Sentiment Score')
         st.pyplot(fig)
+
+if __name__ == '__main__':
+    main()
