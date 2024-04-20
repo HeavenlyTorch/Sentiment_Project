@@ -25,7 +25,7 @@ def query_for_usage():
     Queries Apify for the number of queries used.
     '''
     print('Querying for usage...')
-    url = 'https://api.apify.com/v2/acts?token=' + st.secrets["apify_api_OxEat2Vcy6DI6ww9VXhsw9AZoZbO8f1izVuj"]
+    url = 'https://api.apify.com/v2/users/me/usage/monthly?token=' + st.secrets["APIFY_TOKEN"]
     r = requests.get(url)
     d = json.loads(r.text)
     date = gt(d['data']['usageCycle']['endAt'])
@@ -44,7 +44,7 @@ def query_google(query: str, num_of_queries: int, use_json=True):
         with open('data.json') as f:
             res_ls = json.load(f)
     else:
-        client = ApifyClient(st.secrets["apify_api_OxEat2Vcy6DI6ww9VXhsw9AZoZbO8f1izVuj"])
+        client = ApifyClient(st.secrets["APIFY_TOKEN"])
 
         run_input = {"queries": f"{query} review",
                      "maxPagesPerQuery": num_of_queries // 100,
