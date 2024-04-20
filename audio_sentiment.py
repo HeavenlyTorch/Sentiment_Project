@@ -49,4 +49,4 @@ def show_audio_sentiment():
 
 
 if __name__ == "__main__":
-    main()
+    show_audio_sentiment()
