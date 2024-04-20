@@ -1,83 +1,58 @@
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-import pandas as pd
 import streamlit as st
+from audio_recorder_streamlit import audio_recorder
+import librosa
+import librosa.display
 import matplotlib.pyplot as plt
-import nltk
-nltk.download('vader_lexicon')
+import numpy as np
+import os
+import base64
+import io
 
-def show_Text_Sentiment():
-    analyzer = SentimentIntensityAnalyzer()
-    st.header("Sentiment Analysis")
+def load_audio(audio_file):
+    """Load audio file with librosa."""
+    data, sample_rate = librosa.load(audio_file, sr=None)
+    return data, sample_rate
 
-    # Analyze individual text
-    with st.expander("Analyze Text"):
-        text = st.text_input('Text here: ')
-        if text:
-            sentiment_scores = analyzer.polarity_scores(text)
-            polarity = sentiment_scores['compound']
-            sentiment_label = 'Positive' if polarity > 0 else ('Negative' if polarity < 0 else 'Neutral')
-            st.write('Polarity:', round(polarity, 2))
-            st.write('Sentiment:', sentiment_label)
-
-    # File uploader for CSV analysis
-    uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
-    if uploaded_file is not None:
-        data = load_csv(uploaded_file)
-        if 'Comments' in data.columns:
-            st.write("Preview of uploaded data:")
-            st.write(data.head())
-
-            # Processing sentiment analysis
-            data = process_sentiment(data)
-            st.write("Sentiment Analysis Completed. Preview:")
-            st.write(data.head())
-
-            # Plotting sentiment distribution
-            plot_sentiment_distribution(data)
-
-            # Option to download the results
-            st.download_button(
-                label="Download Sentiment Analysis Results",
-                data=data.to_csv(index=False).encode('utf-8'),
-                file_name='sentiment_analysis_results.csv',
-                mime='text/csv'
-            )
-        else:
-            st.error("CSV does not contain 'Comments' column. Please upload a CSV with the required column.")
-
-def load_csv(uploaded_file):
-    """Loads a CSV file into a DataFrame."""
-    return pd.read_csv(uploaded_file)
-
-def process_sentiment(df):
-    """Processes sentiment analysis for the 'Comments' column in the DataFrame."""
-    analyzer = SentimentIntensityAnalyzer()
-    # Define a function to calculate sentiment
-    def sentiment_score(text):
-        return analyzer.polarity_scores(text)['compound']
-    # Define a function to categorize sentiment
-    def sentiment_category(score):
-        if score > 0:
-            return 'Positive'
-        elif score < 0:
-            return 'Negative'
-        else:
-            return 'Neutral'
-    # Apply the sentiment_score function
-    df['Sentiment Score'] = df['Comments'].apply(sentiment_score)
-    # Apply the sentiment_category function
-    df['Sentiment Category'] = df['Sentiment Score'].apply(sentiment_category)
-    return df
-
-def plot_sentiment_distribution(df):
-    """Plots the sentiment distribution of the DataFrame."""
-    sentiment_counts = df['Sentiment Category'].value_counts()
-    plt.figure(figsize=(8, 4))
-    plt.bar(sentiment_counts.index, sentiment_counts.values, color=['green', 'red', 'blue'])
-    plt.xlabel('Sentiment Category')
-    plt.ylabel('Count')
-    plt.title('Distribution of Sentiments')
+def plot_waveform(data, sample_rate):
+    """Plot waveform of the audio data."""
+    plt.figure(figsize=(10, 4))
+    librosa.display.waveshow(data, sr=sample_rate, alpha=0.5)
+    plt.title('Waveform')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Amplitude')
+    plt.tight_layout()
     st.pyplot(plt)
 
-if __name__ == "__main__":
-    show_Text_Sentiment()
+def analyze_sentiment(audio_data):
+    """Placeholder function to analyze sentiment."""
+    sentiment_score = np.random.rand()  # Random sentiment score
+    return sentiment_score
+
+def show_audio_sentiment():
+    st.title("Audio Sentiment Analysis App")
+
+    # Audio recorder
+    st.subheader("Record your audio")
+    audio_data = st.audio(recording_time=300, record=True, display_streamlit_player=True)
+
+    if audio_data:
+        bytes_data = base64.b64decode(audio_data.split(',')[1])
+        audio_buffer = io.BytesIO(bytes_data)
+        data, rate = librosa.load(audio_buffer, sr=22050)  # Make sure to set the appropriate sample rate
+        st.audio(bytes_data)
+        plot_waveform(data, rate)
+        sentiment = analyze_sentiment(data)
+        st.write(f"Sentiment score: {sentiment:.2f}")
+
+    # Single audio file uploader
+    st.subheader("Or upload an audio file")
+    uploaded_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "ogg"])
+    if uploaded_file is not None:
+        data, rate = load_audio(uploaded_file)
+        st.audio(uploaded_file)
+        plot_waveform(data, rate)
+        sentiment = analyze_sentiment(data)
+        st.write(f"Sentiment score: {sentiment:.2f}")
+
+if __name__ == '__main__':
+    show_audio_sentiment()

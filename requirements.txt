@@ -11,3 +11,4 @@ requests
 torch
 vaderSentiment
 librosa
+audio-recorder-streamlit
