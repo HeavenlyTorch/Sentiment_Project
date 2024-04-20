@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Import the scraper_visual as a module if it's in a different file
-import scraper_visual
+import sentiment
 
 def scraper():
     st.title('Review Scraper')
@@ -19,12 +19,12 @@ def Video_Sentiment():
     st.title('Video Sentiment')
     st.write('Welcome to Video Sentiment')
 
-# Correctly define your pages dictionary
+# Dictionary
 pages = {
-    "Review Scraper": scraper,  # Remove .show
-    "Text Sentiment": Text_Sentiment,  # Remove .show
-    "Audio Sentiment": Audio_sentiment,  # Remove .show
-    "Video Sentiment": Video_Sentiment  # Remove .show
+    "Review Scraper": scraper,
+    "Text Sentiment": Text_Sentiment,
+    "Audio Sentiment": Audio_sentiment,
+    "Video Sentiment": Video_Sentiment
 }
 
 # Initialize session state
