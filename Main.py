@@ -17,7 +17,7 @@ def Video_Sentiment():
 
 # Dictionary
 pages = {
-    "Review Scraper": scraper_visual.display_scraper_page,
+    "Review Scraper": show_scraper_visual,
     "Text Sentiment": Text_Sentiment,
     "Audio Sentiment": Audio_sentiment,
     "Video Sentiment": Video_Sentiment
