@@ -1,44 +1,52 @@
 import streamlit as st
-import librosa
-import librosa.display
+import numpy as np
+import sounddevice as sd
 import matplotlib.pyplot as plt
-import pandas as pd
 import os
-from glob import glob
+import tempfile
 
-# Function to display the waveform of an audio file
-def show_audio_function(audio_file):
-    # Load the audio file
-    audio, sr = librosa.load(audio_file, sr=None)
+# Global settings
+fs = 44100  # Sample rate
+duration = 5  # seconds
 
-    # Display waveform
+
+def record_audio():
+    st.write("Recording...")
+    audio = sd.rec(int(duration * fs), samplerate=fs, channels=2, dtype='float64')
+    sd.wait()  # Wait until recording is finished
+    st.write("Recording stopped.")
+    return audio
+
+
+def plot_waveform(audio):
     plt.figure(figsize=(10, 4))
-    librosa.display.waveshow(audio, sr=sr)
-    plt.title(f'Waveform of {audio_file}')
-    plt.xlabel('Time (s)')
+    plt.plot(np.linspace(0, duration, len(audio)), audio)
+    plt.title('Live Audio Waveform')
+    plt.xlabel('Time [s]')
     plt.ylabel('Amplitude')
-    plt.tight_layout()
+    plt.grid(True)
     st.pyplot(plt)
 
-    # Display audio file (interactive player)
-    st.audio(audio_file)
 
-# Streamlit interface setup
-def show_audio_sentiment():
-    st.title('Audio Sentiment Analysis App')
+def save_audio(audio):
+    # Save the recorded audio to a temporary file to be used by the audio player
+    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+    sd.write(tfile.name, audio, fs)
+    return tfile.name
 
-    # Single audio file analysis
-    st.header('Analyze Single Audio File')
-    audio_file = st.file_uploader("Upload Audio File", type=['wav', 'mp3', 'aac'])
-    if audio_file is not None:
-        show_audio_function(audio_file)
 
-    # Batch audio analysis
-    st.header('Batch Audio Analysis')
-    uploaded_files = st.file_uploader("Upload Multiple Audio Files", type=['wav', 'mp3', 'aac'], accept_multiple_files=True)
-    if uploaded_files:
-        for file in uploaded_files:
-            show_audio_function(file)
+def main():
+    st.title('Live Audio Recording and Analysis')
+
+    if st.button('Record Audio'):
+        audio_data = record_audio()
+        plot_waveform(audio_data)
+        audio_file = save_audio(audio_data)
+        st.audio(audio_file)
+
+    # Add more analysis functionalities here
+    # For example, feature extraction, sentiment analysis, etc.
+
 
 if __name__ == "__main__":
     main()
