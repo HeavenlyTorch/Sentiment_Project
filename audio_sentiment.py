@@ -24,7 +24,7 @@ def show_audio_function(audio_file):
     st.audio(audio_file)
 
 # Streamlit interface setup
-def main():
+def show_audio_sentiment():
     st.title('Audio Sentiment Analysis App')
 
     # Single audio file analysis
