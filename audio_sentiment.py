@@ -1,10 +1,17 @@
 import streamlit as st
+from audio_recorder_streamlit import audio_recorder
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import base64
 import io
-from streamlit.components.v1 import html
+
+def load_audio(audio_file):
+    """Load audio file with librosa."""
+    data, sample_rate = librosa.load(audio_file, sr=None)
+    return data, sample_rate
 
 def plot_waveform(data, sample_rate):
     """Plot waveform of the audio data."""
@@ -24,42 +31,24 @@ def analyze_sentiment(audio_data):
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis App")
 
-    # Custom HTML/JavaScript-based audio recorder
-    recorder_html = """
-    <html>
-        <body>
-        <audio id="audio" controls></audio>
-        <button onclick="startRecording(this);">Record</button>
-        <button onclick="stopRecording(this);" disabled>Stop</button>
-        <script>
-            var audio = document.querySelector('#audio');
-            var recorder, stream;
-            async function startRecording(button) {
-                stream = await navigator.mediaDevices.getUserMedia({audio: true});
-                recorder = new MediaRecorder(stream);
-                recorder.ondataavailable = e => {
-                    audio.src = URL.createObjectURL(e.data);
-                };
-                recorder.start();
-                button.disabled = true;
-                button.nextElementSibling.disabled = false;
-            }
-            function stopRecording(button) {
-                recorder.stop();
-                button.disabled = true;
-                button.previousElementSibling.disabled = false;
-                stream.getAudioTracks()[0].stop();
-            }
-        </script>
-        </body>
-    </html>
-    """
-    html(recorder_html, height=200)
+    # Audio recorder
+    st.subheader("Record your audio")
+    audio_data = st.audio(recording_time=300, record=True, display_streamlit_player=True)
 
-    # Uploading and displaying the audio file
-    uploaded_file = st.file_uploader("Or upload an audio file", type=["wav", "mp3", "ogg"])
+    if audio_data:
+        bytes_data = base64.b64decode(audio_data.split(',')[1])
+        audio_buffer = io.BytesIO(bytes_data)
+        data, rate = librosa.load(audio_buffer, sr=22050)  # Make sure to set the appropriate sample rate
+        st.audio(bytes_data)
+        plot_waveform(data, rate)
+        sentiment = analyze_sentiment(data)
+        st.write(f"Sentiment score: {sentiment:.2f}")
+
+    # Single audio file uploader
+    st.subheader("Or upload an audio file")
+    uploaded_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "ogg"])
     if uploaded_file is not None:
-        data, rate = librosa.load(uploaded_file, sr=22050)  # Adjust sample rate as necessary
+        data, rate = load_audio(uploaded_file)
         st.audio(uploaded_file)
         plot_waveform(data, rate)
         sentiment = analyze_sentiment(data)
