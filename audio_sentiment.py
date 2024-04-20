@@ -33,10 +33,10 @@ def show_audio_sentiment():
 
     # Audio recorder
     st.subheader("Record your audio")
-    audio_data = st.audio(recording_time=300, record=True, display_streamlit_player=True)
+    audio_bytes = audio_recorder()
 
-    if audio_data:
-        bytes_data = base64.b64decode(audio_data.split(',')[1])
+    if audio_bytes:
+        bytes_data = base64.b64decode(audio_bytes.split(',')[1])
         audio_buffer = io.BytesIO(bytes_data)
         data, rate = librosa.load(audio_buffer, sr=22050)  # Make sure to set the appropriate sample rate
         st.audio(bytes_data)
