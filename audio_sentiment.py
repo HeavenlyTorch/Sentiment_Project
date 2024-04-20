@@ -3,12 +3,14 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+import io
+from audio_recorder_streamlit import audio_recorder
 
-def load_audio(audio_file):
-    """Load audio file with librosa."""
-    data, sample_rate = librosa.load(audio_file, sr=None)
-    return data, sample_rate
+def load_audio_from_bytes(audio_bytes, sample_rate=22050):
+    """Load audio data from bytes."""
+    audio_buffer = io.BytesIO(audio_bytes)
+    data, sr = librosa.load(audio_buffer, sr=sample_rate)
+    return data, sr
 
 def plot_waveform(data, sample_rate):
     """Plot waveform of the audio data."""
@@ -22,39 +24,22 @@ def plot_waveform(data, sample_rate):
 
 def analyze_sentiment(audio_data):
     """Placeholder function to analyze sentiment."""
-    # You would integrate your sentiment analysis model here
     sentiment_score = np.random.rand()  # Random sentiment score
     return sentiment_score
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis App")
 
-    # Single audio file uploader
-    uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "ogg"])
-    if uploaded_file is not None:
-        data, rate = load_audio(uploaded_file)
-        st.audio(uploaded_file)
+    # Record audio using the audio recorder library
+    audio_data = audio_recorder(key="recorder")  # Placeholder function name and parameters
+
+    if audio_data is not None:
+        # Assuming audio_data is the bytes of the WAV file
+        data, rate = load_audio_from_bytes(audio_data['blob'])
+        st.audio(audio_data['blob'], format='audio/wav')
         plot_waveform(data, rate)
         sentiment = analyze_sentiment(data)
         st.write(f"Sentiment score: {sentiment:.2f}")
 
-    # Multiple audio files processing
-    uploaded_files = st.file_uploader("Upload multiple audio files for dataset analysis", accept_multiple_files=True)
-    if uploaded_files:
-        sentiment_scores = []
-        for audio_file in uploaded_files:
-            data, rate = load_audio(audio_file)
-            sentiment = analyze_sentiment(data)
-            sentiment_scores.append(sentiment)
-
-        # Display graph of sentiment scores
-        st.write("Sentiment Analysis for Dataset:")
-        fig, ax = plt.subplots()
-        ax.plot(sentiment_scores, marker='o')
-        ax.set_title('Sentiment Analysis of Audio Files')
-        ax.set_xlabel('File Index')
-        ax.set_ylabel('Sentiment Score')
-        st.pyplot(fig)
-
 if __name__ == '__main__':
-    main()
+    show_audio_sentiment()
