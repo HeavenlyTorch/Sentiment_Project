@@ -12,5 +12,3 @@ torch
 vaderSentiment
 librosa
 sounddevice
-pyaudio
-sounddevice

@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
-import os
 import tempfile
 
 # Global settings
