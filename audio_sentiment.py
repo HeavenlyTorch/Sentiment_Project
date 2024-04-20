@@ -2,53 +2,43 @@ import streamlit as st
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-import numpy as np
-import io
-from audio_recorder_streamlit import audio_recorder
+import pandas as pd
+import os
+from glob import glob
 
-def load_audio_from_bytes(audio_bytes, sample_rate=22050):
-    """Load audio data from bytes."""
-    audio_buffer = io.BytesIO(audio_bytes)
-    data, sr = librosa.load(audio_buffer, sr=sample_rate)
-    return data, sr
+# Function to display the waveform of an audio file
+def show_audio_function(audio_file):
+    # Load the audio file
+    audio, sr = librosa.load(audio_file, sr=None)
 
-def plot_waveform(data, sample_rate):
-    """Plot waveform of the audio data."""
+    # Display waveform
     plt.figure(figsize=(10, 4))
-    librosa.display.waveshow(data, sr=sample_rate, alpha=0.5)
-    plt.title('Waveform')
+    librosa.display.waveshow(audio, sr=sr)
+    plt.title(f'Waveform of {audio_file}')
     plt.xlabel('Time (s)')
     plt.ylabel('Amplitude')
     plt.tight_layout()
     st.pyplot(plt)
-    plt.show()
 
-def analyze_sentiment(audio_data):
-    """Placeholder function to analyze sentiment."""
-    sentiment_score = np.random.rand()  # Random sentiment score
-    return sentiment_score
+    # Display audio file (interactive player)
+    st.audio(audio_file)
 
-def show_audio_sentiment():
-    st.title("Audio Sentiment Analysis App")
+# Streamlit interface setup
+def main():
+    st.title('Audio Sentiment Analysis App')
 
-    # Assuming audio_recorder returns a bytes object directly or a dictionary with the audio as a blob
-    audio_data = audio_recorder(key="recorder")  # This function call is correct if audio_recorder returns the audio data directly
+    # Single audio file analysis
+    st.header('Analyze Single Audio File')
+    audio_file = st.file_uploader("Upload Audio File", type=['wav', 'mp3', 'aac'])
+    if audio_file is not None:
+        show_audio_function(audio_file)
 
-    if audio_data:
-        # Check if audio_data is a bytes-like object or a dictionary
-        if isinstance(audio_data, dict):
-            # If it's a dictionary, extract the blob if it exists
-            audio_bytes = audio_data.get('blob')  # Ensure 'blob' is the correct key
-        else:
-            # If it's not a dictionary, assume it's the bytes directly
-            audio_bytes = audio_data
+    # Batch audio analysis
+    st.header('Batch Audio Analysis')
+    uploaded_files = st.file_uploader("Upload Multiple Audio Files", type=['wav', 'mp3', 'aac'], accept_multiple_files=True)
+    if uploaded_files:
+        for file in uploaded_files:
+            show_audio_function(file)
 
-        if audio_bytes:
-            data, rate = load_audio_from_bytes(audio_bytes)
-            st.audio(audio_bytes, format='audio/wav')
-            plot_waveform(data, rate)
-            sentiment = analyze_sentiment(data)
-            st.write(f"Sentiment score: {sentiment:.2f}")
-
-if __name__ == '__main__':
-    show_audio_sentiment()
+if __name__ == "__main__":
+    main()
