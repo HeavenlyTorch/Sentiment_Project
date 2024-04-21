@@ -71,16 +71,16 @@ def save_audio(audio_data):
     return tfile.name
 
 
-def show_audio_sentiment(queue):
+def show_audio_sentiment(audio_queue):
     st.title('Live Audio Recording and Analysis')
 
     if st.button('Record Audio'):
         # Run recording in a thread to avoid blocking
-        record_thread = Thread(target=record_audio, args=(queue,))
+        record_thread = Thread(target=record_audio, args=(audio_queue,))
         record_thread.start()
         record_thread.join()  # Wait for the thread to finish recording
-        if not queue.empty():
-            audio_data = queue.get()
+        if not audio_queue.empty():
+            audio_data = audio_queue.get()
             plot_waveform(audio_data)
             audio_file_path = save_audio(audio_data)
             st.audio(audio_file_path)
