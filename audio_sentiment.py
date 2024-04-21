@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import wave
 import tempfile
 import librosa
+from threading import Thread
+from queue import Queue
 
 # Audio settings
 CHUNK = 1024
@@ -13,19 +15,17 @@ CHANNELS = 2
 RATE = 44100
 RECORD_SECONDS = 5
 
-def record_audio():
+def record_audio(queue):
+    """Records audio from the default microphone."""
     p = pyaudio.PyAudio()
-
     stream = p.open(format=FORMAT,
                     channels=CHANNELS,
                     rate=RATE,
                     input=True,
-                    frames_per_buffer=CHUNK,
-                    input_device_index= 1)
+                    frames_per_buffer=CHUNK)
 
     st.write("Recording...")
     frames = []
-
     for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
         data = stream.read(CHUNK)
         frames.append(data)
@@ -35,7 +35,8 @@ def record_audio():
     stream.close()
     p.terminate()
 
-    return b''.join(frames)
+    # Put the recorded frames as a byte array into the queue
+    queue.put(b''.join(frames))
 
 def load_audio(audio_file):
     """Load audio file with librosa."""
@@ -48,15 +49,14 @@ def analyze_sentiment(audio_data):
     sentiment_score = np.random.rand()  # Random sentiment score
     return sentiment_score
 
-def plot_waveform(audio_data):
-    # Convert byte data to numpy array
-    audio_array = np.frombuffer(audio_data, dtype=np.int16)
+def plot_waveform(data, sample_rate):
+    """Plots waveform of the recorded audio."""
     plt.figure(figsize=(10, 4))
-    plt.plot(audio_array)
-    plt.title('Live Audio Waveform')
-    plt.xlabel('Time [s]')
+    librosa.display.waveshow(data, sr=sample_rate, alpha=0.5)
+    plt.title('Waveform')
+    plt.xlabel('Time (s)')
     plt.ylabel('Amplitude')
-    plt.grid(True)
+    plt.show()
     st.pyplot(plt)
 
 
@@ -71,14 +71,19 @@ def save_audio(audio_data):
     return tfile.name
 
 
-def show_audio_sentiment():
+def show_audio_sentiment(queue):
     st.title('Live Audio Recording and Analysis')
 
     if st.button('Record Audio'):
-        audio_data = record_audio(1)  # Pass the device index to the recording function
-        plot_waveform(audio_data)
-        audio_file_path = save_audio(audio_data)
-        st.audio(audio_file_path)
+        # Run recording in a thread to avoid blocking
+        record_thread = Thread(target=record_audio, args=(queue,))
+        record_thread.start()
+        record_thread.join()  # Wait for the thread to finish recording
+        if not queue.empty():
+            audio_data = queue.get()
+            plot_waveform(audio_data)
+            audio_file_path = save_audio(audio_data)
+            st.audio(audio_file_path)
 
     # Multiple audio files processing
     uploaded_files = st.file_uploader("Upload multiple audio files for dataset analysis",
