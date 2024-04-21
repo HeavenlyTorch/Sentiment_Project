@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import wave
 import tempfile
+import librosa
 
 # Audio settings
 CHUNK = 1024
@@ -36,6 +37,16 @@ def record_audio():
 
     return b''.join(frames)
 
+def load_audio(audio_file):
+    """Load audio file with librosa."""
+    data, sample_rate = librosa.load(audio_file, sr=None)
+    return data, sample_rate
+
+def analyze_sentiment(audio_data):
+    """Placeholder function to analyze sentiment."""
+    # You would integrate your sentiment analysis model here
+    sentiment_score = np.random.rand()  # Random sentiment score
+    return sentiment_score
 
 def plot_waveform(audio_data):
     # Convert byte data to numpy array
@@ -68,6 +79,16 @@ def show_audio_sentiment():
         plot_waveform(audio_data)
         audio_file_path = save_audio(audio_data)
         st.audio(audio_file_path)
+
+    # Multiple audio files processing
+    uploaded_files = st.file_uploader("Upload multiple audio files for dataset analysis",
+                                          accept_multiple_files=True)
+    if uploaded_files:
+        sentiment_scores = []
+        for audio_file in uploaded_files:
+            data, rate = load_audio(audio_file)
+            sentiment = analyze_sentiment(data)
+            sentiment_scores.append(sentiment)
 
 
 if __name__ == "__main__":
