@@ -64,7 +64,7 @@ def show_audio_sentiment():
     st.title('Live Audio Recording and Analysis')
 
     if st.button('Record Audio'):
-        audio_data = record_audio()
+        audio_data = record_audio(1)  # Pass the device index to the recording function
         plot_waveform(audio_data)
         audio_file_path = save_audio(audio_data)
         st.audio(audio_file_path)
