@@ -13,3 +13,4 @@ vaderSentiment
 librosa
 pyaudio
 Thread
+io

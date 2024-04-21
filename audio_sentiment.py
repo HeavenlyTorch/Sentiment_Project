@@ -7,6 +7,7 @@ import tempfile
 import librosa
 from threading import Thread
 from queue import Queue
+import io
 
 # Audio settings
 CHUNK = 1024
@@ -59,7 +60,6 @@ def plot_waveform(data, sample_rate):
     plt.show()
     st.pyplot(plt)
 
-
 def save_audio(audio_data):
     tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
     wf = wave.open(tfile.name, 'wb')
@@ -81,13 +81,13 @@ def show_audio_sentiment(audio_queue):
         record_thread.join()  # Wait for the thread to finish recording
         if not audio_queue.empty():
             audio_data = audio_queue.get()
-            plot_waveform(audio_data)
+            data, rate = librosa.load(io.BytesIO(audio_data), sr=RATE)
+            plot_waveform(data, rate)
             audio_file_path = save_audio(audio_data)
             st.audio(audio_file_path)
 
     # Multiple audio files processing
-    uploaded_files = st.file_uploader("Upload multiple audio files for dataset analysis",
-                                          accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Upload multiple audio files for dataset analysis", accept_multiple_files=True)
     if uploaded_files:
         sentiment_scores = []
         for audio_file in uploaded_files:
@@ -97,4 +97,6 @@ def show_audio_sentiment(audio_queue):
 
 
 if __name__ == "__main__":
-    show_audio_sentiment()
+    # Create a Queue for audio data
+    audio_queue = Queue()
+    show_audio_sentiment(audio_queue)
