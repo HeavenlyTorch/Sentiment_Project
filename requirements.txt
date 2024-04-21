@@ -13,4 +13,5 @@ vaderSentiment
 librosa
 pyaudio
 Thread
-wave
+pybase64
+pydub
