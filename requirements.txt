@@ -11,4 +11,4 @@ requests
 torch
 vaderSentiment
 librosa
-sounddevice
+pyaudio
