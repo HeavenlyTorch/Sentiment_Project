@@ -12,7 +12,6 @@ CHANNELS = 2
 RATE = 44100
 RECORD_SECONDS = 5
 
-
 def record_audio():
     p = pyaudio.PyAudio()
 
@@ -20,7 +19,8 @@ def record_audio():
                     channels=CHANNELS,
                     rate=RATE,
                     input=True,
-                    frames_per_buffer=CHUNK)
+                    frames_per_buffer=CHUNK,
+                    input_device_index= 1)
 
     st.write("Recording...")
     frames = []
