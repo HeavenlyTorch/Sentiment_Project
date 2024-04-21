@@ -1,25 +1,47 @@
 import streamlit as st
+import pyaudio
 import numpy as np
-import sounddevice as sd
 import matplotlib.pyplot as plt
+import wave
 import tempfile
 
-# Global settings
-fs = 44100  # Sample rate
-duration = 5  # seconds
+# Audio settings
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 2
+RATE = 44100
+RECORD_SECONDS = 5
 
 
 def record_audio():
+    p = pyaudio.PyAudio()
+
+    stream = p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=RATE,
+                    input=True,
+                    frames_per_buffer=CHUNK)
+
     st.write("Recording...")
-    audio = sd.rec(int(duration * fs), samplerate=fs, channels=2, dtype='float64')
-    sd.wait()  # Wait until recording is finished
+    frames = []
+
+    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = stream.read(CHUNK)
+        frames.append(data)
+
     st.write("Recording stopped.")
-    return audio
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    return b''.join(frames)
 
 
-def plot_waveform(audio):
+def plot_waveform(audio_data):
+    # Convert byte data to numpy array
+    audio_array = np.frombuffer(audio_data, dtype=np.int16)
     plt.figure(figsize=(10, 4))
-    plt.plot(np.linspace(0, duration, len(audio)), audio)
+    plt.plot(audio_array)
     plt.title('Live Audio Waveform')
     plt.xlabel('Time [s]')
     plt.ylabel('Amplitude')
@@ -27,10 +49,14 @@ def plot_waveform(audio):
     st.pyplot(plt)
 
 
-def save_audio(audio):
-    # Save the recorded audio to a temporary file to be used by the audio player
+def save_audio(audio_data):
     tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
-    sd.write(tfile.name, audio, fs)
+    wf = wave.open(tfile.name, 'wb')
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(audio_data)
+    wf.close()
     return tfile.name
 
 
@@ -40,11 +66,8 @@ def show_audio_sentiment():
     if st.button('Record Audio'):
         audio_data = record_audio()
         plot_waveform(audio_data)
-        audio_file = save_audio(audio_data)
-        st.audio(audio_file)
-
-    # Add more analysis functionalities here
-    # For example, feature extraction, sentiment analysis, etc.
+        audio_file_path = save_audio(audio_data)
+        st.audio(audio_file_path)
 
 
 if __name__ == "__main__":
