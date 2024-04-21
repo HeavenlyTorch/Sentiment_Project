@@ -7,7 +7,6 @@ import tempfile
 import librosa
 from threading import Thread
 from queue import Queue
-import io
 
 # Audio settings
 CHUNK = 1024
@@ -36,8 +35,9 @@ def record_audio(queue):
     stream.close()
     p.terminate()
 
-    # Put the recorded frames as a byte array into the queue
-    queue.put(b''.join(frames))
+    # Save the recorded frames as a byte array
+    audio_data = b''.join(frames)
+    queue.put(audio_data)
 
 def load_audio(audio_file):
     """Load audio file with librosa."""
@@ -50,6 +50,17 @@ def analyze_sentiment(audio_data):
     sentiment_score = np.random.rand()  # Random sentiment score
     return sentiment_score
 
+def save_audio(audio_data):
+    """Saves recorded audio to a temporary file and returns the file path."""
+    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+    wf = wave.open(tfile.name, 'wb')
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(audio_data)
+    wf.close()
+    return tfile.name
+
 def plot_waveform(data, sample_rate):
     """Plots waveform of the recorded audio."""
     plt.figure(figsize=(10, 4))
@@ -60,31 +71,19 @@ def plot_waveform(data, sample_rate):
     plt.show()
     st.pyplot(plt)
 
-def save_audio(audio_data):
-    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
-    wf = wave.open(tfile.name, 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(audio_data)
-    wf.close()
-    return tfile.name
-
-
 def show_audio_sentiment(audio_queue):
     st.title('Live Audio Recording and Analysis')
-
     if st.button('Record Audio'):
-        # Run recording in a thread to avoid blocking
-        record_thread = Thread(target=record_audio, args=(audio_queue,))
-        record_thread.start()
-        record_thread.join()  # Wait for the thread to finish recording
-        if not audio_queue.empty():
-            audio_data = audio_queue.get()
-            data, rate = librosa.load(io.BytesIO(audio_data), sr=RATE)
-            plot_waveform(data, rate)
-            audio_file_path = save_audio(audio_data)
-            st.audio(audio_file_path)
+        with st.spinner('Recording...'):
+            record_thread = Thread(target=record_audio, args=(audio_queue,))
+            record_thread.start()
+            record_thread.join()
+            if not audio_queue.empty():
+                audio_data = audio_queue.get()
+                audio_file_path = save_audio(audio_data)
+                data, rate = librosa.load(audio_file_path, sr=RATE)
+                plot_waveform(data, rate)
+                st.audio(audio_file_path)
 
     # Multiple audio files processing
     uploaded_files = st.file_uploader("Upload multiple audio files for dataset analysis", accept_multiple_files=True)
@@ -95,8 +94,6 @@ def show_audio_sentiment(audio_queue):
             sentiment = analyze_sentiment(data)
             sentiment_scores.append(sentiment)
 
-
 if __name__ == "__main__":
-    # Create a Queue for audio data
     audio_queue = Queue()
     show_audio_sentiment(audio_queue)
