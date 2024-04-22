@@ -4,6 +4,7 @@ import streamlit as st
 from scraper_visual import show_scraper_visual
 from text_sentiment import show_Text_Sentiment
 from audio_sentiment import show_audio_sentiment
+from video_sentiment import show_video_sentiment
 
 
 def Audio_sentiment():
@@ -19,7 +20,7 @@ pages = {
     "Review Scraper": show_scraper_visual,
     "Text Sentiment": show_Text_Sentiment,
     "Audio Sentiment": show_audio_sentiment,
-    "Video Sentiment": Video_Sentiment
+    "Video Sentiment": show_video_sentiment
 }
 
 # Initialize session state
