@@ -45,9 +45,7 @@ def load_lottieurl(url: str):
 
 voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
 
-st.title('Create real_time transcription from your microphone')
 
-start, stop = st.columns(2)
 
 
 def stop_listening():
@@ -58,10 +56,6 @@ def start_listening():
     st.session_state['run'] = True
     st_lottie(voice_animation, height=200)
 
-
-start.button('Start Listening', on_click=start_listening)
-
-stop.button('Stop Listening', on_click=stop_listening)
 
 endpoint_url = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
@@ -122,6 +116,14 @@ async def send_receive():
 
         send_result, receive_result = await asyncio.gather(send(), receive())
 
+def show_audio_sentiment():
+    st.title('Create real_time transcription from your microphone')
 
-asyncio.run(send_receive())
+    start, stop = st.columns(2)
+
+    start.button('Start Listening', on_click=start_listening)
+
+    stop.button('Stop Listening', on_click=stop_listening)
+
+    asyncio.run(send_receive())
 
