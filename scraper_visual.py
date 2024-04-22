@@ -22,7 +22,7 @@ amazon_model = utils.download_model(utils.MODEL_NAME_AMAZON)
 
 utils.init()
 
-def show_scraper_visual():
+def show_scraper():
     st.title('Review Scraper')
     st.caption('Scrapes [Google](https://www.google.com/) for reviews of a product')
     st.markdown("""

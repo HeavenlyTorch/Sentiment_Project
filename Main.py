@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Import the scraper_visual as a module if it's in a different file
-from scraper_visual import show_scraper_visual
+from scraper_visual import show_scraper
 from text_sentiment import show_Text_Sentiment
 from audio_sentiment import show_audio_sentiment
 
@@ -16,7 +16,7 @@ def Video_Sentiment():
 
 # Dictionary
 pages = {
-    "Review Scraper": show_scraper_visual,
+    "Review Scraper": show_scraper,
     "Text Sentiment": show_Text_Sentiment,
     "Audio Sentiment": show_audio_sentiment,
     "Video Sentiment": Video_Sentiment
