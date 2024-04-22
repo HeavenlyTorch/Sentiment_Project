@@ -61,7 +61,7 @@ def setup_webrtc():
 
 # Streamlit UI setup
 def show_audio_sentiment():
-    st.title('Real-time transcription from your microphone')
+    st.title('Live audio sentiment')
     voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
 
     if voice_animation:
