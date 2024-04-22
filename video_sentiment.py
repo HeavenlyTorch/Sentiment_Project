@@ -30,20 +30,20 @@ def analyze_sentiment(frames):
         #pred = model.predict(frame)
         #results.append(pred)
     return results
+def show_video_sentiment():
+    # Streamlit user interface
+    st.title('Video Sentiment Analysis App')
 
-# Streamlit user interface
-st.title('Video Sentiment Analysis App')
+    uploaded_file = st.file_uploader("Choose a video...", type=['mp4', 'avi'])
+    if uploaded_file is not None:
+        # Use a temporary file to store the uploaded video
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(uploaded_file.read())
+            video_frames = extract_frames(tmp_file.name)
 
-uploaded_file = st.file_uploader("Choose a video...", type=['mp4', 'avi'])
-if uploaded_file is not None:
-    # Use a temporary file to store the uploaded video
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        video_frames = extract_frames(tmp_file.name)
+        # Perform sentiment analysis
+        sentiments = analyze_sentiment(video_frames)
 
-    # Perform sentiment analysis
-    sentiments = analyze_sentiment(video_frames)
-
-    # Display results
-    for i, sentiment in enumerate(sentiments):
-        st.write(f"Frame {i + 1}: Sentiment - {np.argmax(sentiment)}")
+        # Display results
+        for i, sentiment in enumerate(sentiments):
+            st.write(f"Frame {i + 1}: Sentiment - {np.argmax(sentiment)}")
