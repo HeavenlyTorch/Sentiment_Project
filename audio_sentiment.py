@@ -24,7 +24,8 @@ stream = p.open(
     channels=Channels,
     rate=Rate,
     input=True,
-    frames_per_buffer=Frames_per_buffer
+    frames_per_buffer=Frames_per_buffer,
+    input_device_index=1
 )
 
 webrtc_ctx = webrtc_streamer(
