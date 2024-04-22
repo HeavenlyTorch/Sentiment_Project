@@ -15,4 +15,5 @@ pyaudio
 Thread
 pybase64
 pydub
-keras.models
+opencv-python-headless
+tensorflow
