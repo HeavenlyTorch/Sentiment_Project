@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-import pybase64
+import base64
 from pydub import AudioSegment
 import matplotlib.pyplot as plt
 from scipy.io import wavfile

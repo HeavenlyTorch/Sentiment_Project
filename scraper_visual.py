@@ -49,8 +49,7 @@ def show_scraper_visual():
     item = form.text_input('Enter an item (product, movie, etc.) to search for reviews: ', value='')
     num_of_queries = form.slider('Number of queries: ', min_value=100, max_value=1000, value=100, step=100)
     submit = form.form_submit_button('Search')
-    if submit or st.session_state.load_state:
-        st.session_state.load_state = True
+    if submit:
         st.write(f'Searching for reviews for **{item}**...')
         desc_dataset, rating_dataset = scraper.query_google(item, num_of_queries,
                                                             use_json=False)  # use_json=True for dummy data

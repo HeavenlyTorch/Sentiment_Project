@@ -15,3 +15,4 @@ pyaudio
 Thread
 pybase64
 pydub
+keras.models
