@@ -1,106 +1,78 @@
 import asyncio
-import base64
 import json
-import pyaudio
 import streamlit as st
 import websockets
 from streamlit_lottie import st_lottie
 import requests
-from streamlit_webrtc import WebRtcMode, webrtc_streamer
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+import numpy as np
+import pybase64
 
-if 'run' not in st.session_state:
-    st.session_state['run'] = False
 
-# Audio configuration
-Frames_per_buffer = 3200
-Format = pyaudio.paInt16
-Channels = 1
-Rate = 16000
-p = pyaudio.PyAudio()
-
-# Open the default microphone stream
-stream = p.open(
-    format=Format,
-    channels=Channels,
-    rate=Rate,
-    input=True,
-    frames_per_buffer=Frames_per_buffer,
-    input_device_index=1
-)
-
-# WebRTC streamer configuration
-webrtc_ctx = webrtc_streamer(
-    key="speech-to-text",
-    mode=WebRtcMode.SENDONLY,
-    audio_receiver_size=1024,
-    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-    media_stream_constraints={"video": False, "audio": True},
-)
-
+# Load animation function
 def load_lottieurl(url: str):
     r = requests.get(url)
     if r.status_code != 200:
         return None
     return r.json()
 
-# Load animation
-voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
 
-def start_listening():
-    st.session_state['run'] = True
-    st_lottie(voice_animation, height=200)
+# Audio processor for handling audio frames received via WebRTC
+class AudioProcessor(AudioProcessorBase):
+    def __init__(self, websocket_url, auth_key):
+        self.ws = None
+        self.websocket_url = websocket_url
+        self.auth_key = auth_key
 
-def stop_listening():
-    st.session_state['run'] = False
+    async def connect_websocket(self):
+        self.ws = await websockets.connect(
+            self.websocket_url,
+            extra_headers=(("Authorization", self.auth_key),),
+            ping_interval=5,
+            ping_timeout=20
+        )
 
-# WebSocket connection function
-async def send_receive(endpoint_url):
-    print(f'Connecting websocket to url {endpoint_url}')
-    async with websockets.connect(
-        endpoint_url,
-        extra_headers=(("Authorization", st.secrets["key"]),),
-        ping_interval=5,
-        ping_timeout=20
-    ) as ws:
-        print("Connected, sending and receiving messages...")
+    async def send_audio_data(self, audio_data):
+        if self.ws is not None:
+            try:
+                await self.ws.send(json.dumps({"audio_data": audio_data}))
+            except websockets.exceptions.ConnectionClosed:
+                await self.connect_websocket()  # Reconnect if connection is closed
 
-        async def send():
-            while st.session_state['run']:
-                try:
-                    data = stream.read(Frames_per_buffer, exception_on_overflow=False)
-                    data = base64.b64encode(data).decode("utf-8")
-                    json_data = json.dumps({"audio_data": str(data)})
-                    await ws.send(json_data)
-                except Exception as e:
-                    print(f"Error sending data: {e}")
-                    break
+    async def recv(self, frame):
+        audio_data = np.array(frame.to_ndarray(format="f32"))
+        pybase64_encoded_audio = pybase64.b64encode(audio_data.tobytes()).decode("utf-8")
+        await self.send_audio_data(pybase64_encoded_audio)
+        return frame
 
-        async def receive():
-            while st.session_state['run']:
-                try:
-                    result_str = await ws.recv()
-                    if json.loads(result_str)['message_type'] == 'FinalTranscript':
-                        st.markdown(json.loads(result_str)['text'])
-                except Exception as e:
-                    print(f"Error receiving data: {e}")
-                    break
 
-        send_task = asyncio.create_task(send())
-        receive_task = asyncio.create_task(receive())
-        await asyncio.gather(send_task, receive_task)
+# Setup for WebRTC streamer
+def setup_webrtc():
+    webrtc_ctx = webrtc_streamer(
+        key="audio_processor",
+        mode=WebRtcMode.SENDRECV,
+        audio_processor_factory=lambda: AudioProcessor(
+            "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", st.secrets["key"]),
+        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+        media_stream_constraints={"video": False, "audio": True}
+    )
+    return webrtc_ctx
 
+
+# Streamlit UI setup
 def show_audio_sentiment():
     st.title('Real-time transcription from your microphone')
-    col1, col2 = st.columns(2)
-    col1.button('Start Listening', on_click=start_listening)
-    col2.button('Stop Listening', on_click=stop_listening)
+    voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
 
-    # Use Streamlit's run in thread for async functions
-    if st.session_state['run']:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(send_receive("wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"))
-        loop.close()
+    if voice_animation:
+        st_lottie(voice_animation, height=200)
+
+    webrtc_ctx = setup_webrtc()
+    if webrtc_ctx.state.playing:
+        st.text("Listening...")
+    else:
+        st.text("Click start above to start listening.")
+
 
 # Display the app
 show_audio_sentiment()
