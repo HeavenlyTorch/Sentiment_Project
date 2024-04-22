@@ -4,7 +4,6 @@ import streamlit as st
 from scraper_visual import show_scraper_visual
 from text_sentiment import show_Text_Sentiment
 from audio_sentiment import show_audio_sentiment
-from video_sentiment import show_video_sentiment
 
 
 def Audio_sentiment():
