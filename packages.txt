@@ -5,4 +5,3 @@ libasound-dev
 libportaudio2
 libportaudiocpp0
 ffmpeg
-libav-tools
