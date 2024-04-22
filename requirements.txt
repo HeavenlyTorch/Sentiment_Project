@@ -19,4 +19,5 @@ opencv-python-headless
 tensorflow
 requests
 streamlit_lottie
+streamlit-webrtc
 websockets
