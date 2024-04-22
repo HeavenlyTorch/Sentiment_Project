@@ -1,79 +1,127 @@
-import streamlit as st
-import os
+import websockets
+import asyncio
 import base64
-from pydub import AudioSegment
-import matplotlib.pyplot as plt
-from scipy.io import wavfile
-import numpy as np
+import json
+import pyaudio
+from streamlit_lottie import st_lottie
+import requests
+from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
-# Function to generate a waveform
-def plot_waveform(wav_file):
-    rate, data = wavfile.read(wav_file)
-    plt.figure(figsize=(10, 4))
-    plt.plot(data, color='blue')
-    st.pyplot(plt)
+import streamlit as st
 
-def show_audio_sentiment():
-    # Streamlit UI
-    st.title("Audio Analysis App")
+if 'run' not in st.session_state:
+    st.session_state['run'] = False
 
-    # Record audio (requires user to manually start/stop recording)
-    audio_recorder = """
-    <button onclick="startRecording(this);">Start Recording</button>
-    <button onclick="stopRecording(this);" disabled>Stop Recording</button>
-    <script>
-    var button = document.querySelector('button');
-    var recorder, stream;
+Frames_per_buffer = 3200
+Format = pyaudio.paInt16
+Channels = 1
+Rate = 16000
+p = pyaudio.PyAudio()
 
-    async function startRecording(button) {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        recorder = new MediaRecorder(stream);
-        const chunks = [];
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = e => {
-            const completeBlob = new Blob(chunks, { type: chunks[0].type });
-            var reader = new FileReader();
-            reader.readAsDataURL(completeBlob);
-            reader.onloadend = function() {
-                var base64data = reader.result;
-                document.getElementById('audio_base64').value = base64data;
-            }
-        };
-        recorder.start();
-        button.nextElementSibling.disabled = false;
-        button.disabled = true;
-    }
+# starts recording
+stream = p.open(
+    format=Format,
+    channels=Channels,
+    rate=Rate,
+    input=True,
+    frames_per_buffer=Frames_per_buffer
+)
 
-    function stopRecording(button) {
-        recorder.stop();
-        stream.getTracks().forEach(track => track.stop());
-        button.previousElementSibling.disabled = false;
-        button.disabled = true;
-    }
-    </script>
-    <input type="hidden" id="audio_base64" name="audio_base64">
-    """
+webrtc_ctx = webrtc_streamer(
+    key="speech-to-text",
+    mode=WebRtcMode.SENDONLY,
+    audio_receiver_size=1024,
+    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+    media_stream_constraints={"video": False, "audio": True},
+)
 
-    st.markdown(audio_recorder, unsafe_allow_html=True)
-    audio_base64 = st.text_input("Audio Base64", "", type="password")
 
-    # File uploader for dataset analysis
-    uploaded_files = st.file_uploader("Choose an audio file", accept_multiple_files=True)
-    for uploaded_file in uploaded_files:
-        if uploaded_file is not None:
-            with open(os.path.join("tempDir", uploaded_file.name), "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            st.write(f"Processed {uploaded_file.name}")
-            plot_waveform(os.path.join("tempDir", uploaded_file.name))
+def load_lottieurl(url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
 
-    # Reset button
-    if st.button('Reset'):
-        st.caching.clear_cache()
-        st.experimental_rerun()
 
-    # Example sentiment analysis (you will need an actual model or API call here)
-    if audio_base64:
-        st.write("Performing sentiment analysis on the recorded audio...")
-        # This is a placeholder, you should integrate actual sentiment analysis here
-        st.write("Sentiment: Positive")
+voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
+
+st.title('Create real_time transcription from your microphone')
+
+start, stop = st.columns(2)
+
+
+def stop_listening():
+    st.session_state['run'] = False
+
+
+def start_listening():
+    st.session_state['run'] = True
+    st_lottie(voice_animation, height=200)
+
+
+start.button('Start Listening', on_click=start_listening)
+
+stop.button('Stop Listening', on_click=stop_listening)
+
+endpoint_url = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
+
+
+async def send_receive():
+    print(f'Connecting websocket to url ${endpoint_url}')
+
+    async with websockets.connect(
+            endpoint_url,
+            extra_headers=(("Authorization", st.secrets.key),),
+            ping_interval=5,
+            ping_timeout=20
+    ) as _ws:
+
+        r = await asyncio.sleep(0.1)
+        print("Receiving SessionBegins ...")
+
+        session_begins = await _ws.recv()
+        print(session_begins)
+        print("Sending messages ...")
+
+        async def send():
+            while st.session_state['run']:
+                try:
+                    audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
+                    data = stream.read(Frames_per_buffer)
+                    data = base64.b64encode(data).decode("utf-8")
+                    json_data = json.dumps({"audio_data": str(data)})
+                    r = await _ws.send(json_data)
+
+                except websockets.exceptions.ConnectionClosedError as e:
+                    print(e)
+                    assert e.code == 4008
+                    break
+
+                except Exception as e:
+                    assert False, "Not a websocket 4008 error"
+
+                r = await asyncio.sleep(0.01)
+
+            return True
+
+        async def receive():
+            while st.session_state['run']:
+                try:
+                    result_str = await _ws.recv()
+                    if json.loads(result_str)['message_type'] == 'FinalTranscript':
+                        print(json.loads(result_str)['text'])
+                        st.markdown(json.loads(result_str)['text'])
+
+                except websockets.exceptions.ConnectionClosedError as e:
+                    print(e)
+                    assert e.code == 4008
+                    break
+
+                except Exception as e:
+                    assert False, "Not a websocket 4008 error"
+
+        send_result, receive_result = await asyncio.gather(send(), receive())
+
+
+asyncio.run(send_receive())
 
