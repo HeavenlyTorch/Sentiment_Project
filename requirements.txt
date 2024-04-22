@@ -15,7 +15,6 @@ pyaudio
 Thread
 pybase64
 pydub
-opencv-python-headless
 tensorflow
 requests
 streamlit_lottie
