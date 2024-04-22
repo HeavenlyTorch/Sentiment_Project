@@ -2,11 +2,11 @@ import streamlit as st
 import cv2
 import tempfile
 import tensorflow as tf
-from tensorflow.keras.models import load_model
+#from tensorflow.keras.models import load_model
 import numpy as np
 
 # Load your pre-trained model (make sure to provide the correct path)
-model = load_model('model.h5')
+#model = load_model('model.h5')
 
 def extract_frames(video_file):
     # Extract frames from the video file
@@ -27,8 +27,8 @@ def analyze_sentiment(frames):
         frame = cv2.resize(frame, (224, 224))  # Example resize to model expected size
         frame = frame / 255.0  # Normalize pixel values
         frame = np.expand_dims(frame, axis=0)  # Expand dims to fit model input
-        pred = model.predict(frame)
-        results.append(pred)
+        #pred = model.predict(frame)
+        #results.append(pred)
     return results
 
 # Streamlit user interface
