@@ -22,3 +22,6 @@ streamlit_lottie
 streamlit-webrtc
 websockets
 assemblyai
+ibm_watson
+ibm_cloud_sdk_core
+watson_developer_cloud

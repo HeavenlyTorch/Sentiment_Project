@@ -1,96 +1,82 @@
-import asyncio
-import json
+import os
+import io
 import streamlit as st
-import websockets
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import requests
+from google.cloud import language_v1
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
-import numpy as np
-import pybase64
-import assemblyai as aai
+from pydub import AudioSegment
+import base64
+import time
 
-aai.settings.api_key = "62525f1b2bc7436baecf9085bc076f53"
+# Set up the Google Cloud Natural Language API client
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path/to/your/credentials.json'
+client = language_v1.LanguageServiceClient()
 
-# Load animation function
-def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
+# Define the audio sentiment analysis function
+def analyze_audio_sentiment(audio_data):
+    # Convert the audio data to a buffer
+    audio_buffer = io.BytesIO(audio_data)
 
+    # Perform speech-to-text conversion on the audio data
+    response = client.sync_recognize(
+        request = {'config': {'encoding': language_v1.RecognitionConfig.AudioEncoding.LINEAR16,
+                              'sample_rate_hertz': 16000,
+                              'language_code': 'en-US'},
+                   'audio': {'content': audio_buffer.read()}}
+    )
 
-# Audio processor for handling audio frames received via WebRTC
+    # Extract the transcript from the speech-to-text response
+    transcript = response.results[0].alternatives[0].transcript
+
+    # Create a document object for the text
+    document = language_v1.Document(content=transcript, type_=language_v1.Document.Type.PLAIN_TEXT)
+
+    # Perform sentiment analysis on the document
+    response = client.analyze_sentiment(request={'document': document, 'encoding_type': language_v1.EncodingType.UTF8})
+
+    # Return the sentiment score and magnitude
+    sentiment_score = response.document_sentiment.score
+    sentiment_magnitude = response.document_sentiment.magnitude
+    return sentiment_score, sentiment_magnitude
+
+# Define the audio processing function for the WebRTC stream
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
+        self.sentiment_score = 0
+        self.sentiment_magnitude = 0
+
     def recv(self, frame):
-        audio = np.array(frame.to_ndarray(format="f32"))
-        self.visualize_audio(audio)
+        # Perform sentiment analysis on the audio frame
+        sentiment_score, sentiment_magnitude = analyze_audio_sentiment(frame.to_ndarray())
+
+        # Update the sentiment score and magnitude
+        self.sentiment_score = sentiment_score
+        self.sentiment_magnitude = sentiment_magnitude
+
+        # Visualize the audio waveform
+        st.write("Audio Waveform")
+        st.audio(frame.to_ndarray(), format='audio/wav')
+
+        # Display the sentiment score and magnitude
+        st.write("Sentiment Score:", round(self.sentiment_score, 2))
+        st.write("Sentiment Magnitude:", round(self.sentiment_magnitude, 2))
+
+        # Return the frame to the WebRTC stream
         return frame
 
-    def visualize_audio(self, audio_data):
-        # Clear the previous plot to avoid memory leak and redundant drawings
-        plt.clf()
+# Define the Streamlit app
+def show_audio_sentiment():
+    st.title("Audio Sentiment Analysis")
 
-        # Create a new figure for the plot
-        fig, ax = plt.subplots(figsize=(10, 2))
-        ax.plot(audio_data, color='blue')
-        ax.set_title("Real time Audio Waveform")
-        ax.set_xlabel("Samples")
-        ax.set_ylabel("Amplitude")
-
-        # Ensure the plot updates in the Streamlit interface
-        st.pyplot(fig)
-
-    async def connect_websocket(self):
-        self.ws = await websockets.connect(
-            self.websocket_url,
-            extra_headers=(("Authorization", self.auth_key),),
-            ping_interval=5,
-            ping_timeout=20
-        )
-
-    async def send_audio_data(self, audio_data):
-        if self.ws is not None:
-            try:
-                await self.ws.send(json.dumps({"audio_data": audio_data}))
-            except websockets.exceptions.ConnectionClosed:
-                await self.connect_websocket()  # Reconnect if connection is closed
-
-    async def recv(self, frame):
-        print("Frame received")  # Debug print
-        audio_data = np.array(frame.to_ndarray(format="f32"))
-        pybase64_encoded_audio = pybase64.b64encode(audio_data.tobytes()).decode("utf-8")
-        await self.send_audio_data(pybase64_encoded_audio)
-        return frame
-
-
-# Setup for WebRTC streamer
-def setup_webrtc():
+    # Start the WebRTC stream
     webrtc_ctx = webrtc_streamer(
         key="audio_processor",
         mode=WebRtcMode.SENDRECV,
-        audio_processor_factory=lambda: AudioProcessor("wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", aai.settings.api_key),
+        audio_processor_factory=lambda: AudioProcessor(),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         media_stream_constraints={"video": False, "audio": True}
     )
-    return webrtc_ctx
 
-
-# Streamlit UI setup
-def show_audio_sentiment():
-    st.title("Real-time Voice Waveform")
-    st.write("This app captures your voice and displays the waveform in real-time.")
-
-    # Define the audio processor factory without parameters
-    webrtc_ctx = webrtc_streamer(
-        key="audio",
-        mode=WebRtcMode.SENDRECV,
-        audio_processor_factory=AudioProcessor,  # Pass class directly without instantiation
-        media_stream_constraints={"video": False, "audio": True},
-        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-    )
-
-if __name__ == "__main__":
+# Run the Streamlit app
+if __name__ == '__main__':
     show_audio_sentiment()
