@@ -67,7 +67,7 @@ def show_audio_sentiment():
     voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
 
     if voice_animation:
-        st_lottie(voice_animation, height=200)
+        st_lottie(voice_animation, height=500)
 
     webrtc_ctx = setup_webrtc()
     if webrtc_ctx.state.playing:
