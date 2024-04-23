@@ -7,7 +7,9 @@ import requests
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
 import numpy as np
 import pybase64
+import assemblyai as aai
 
+aai.settings.api_key = "62525f1b2bc7436baecf9085bc076f53"
 
 # Load animation function
 def load_lottieurl(url: str):
@@ -52,7 +54,7 @@ def setup_webrtc():
         key="audio_processor",
         mode=WebRtcMode.SENDRECV,
         audio_processor_factory=lambda: AudioProcessor(
-            "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", st.secrets["AUDIO_KEY"]),
+            "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", aai.settings.api_key),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         media_stream_constraints={"video": False, "audio": True}
     )
