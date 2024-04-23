@@ -13,10 +13,17 @@ class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
         self.figure, self.ax = plt.subplots(figsize=(10, 2))
+        print("AudioProcessor initialized")  # Debug statement
 
     def recv(self, frame):
+        print("Frame received")  # Debug statement
         audio_data = np.array(frame.to_ndarray(format="f32"))
-        # Display the waveform
+        if audio_data.size == 0:
+            print("No audio data received")  # Debug statement
+            return frame
+        print("Processing audio data")  # Debug statement
+
+        # Visualization
         self.ax.clear()
         self.ax.plot(audio_data, color='blue')
         self.ax.set_title("Real-time Audio Waveform")
