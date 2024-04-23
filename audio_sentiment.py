@@ -8,7 +8,7 @@ import base64
 import time
 
 # Set up the Google Cloud Natural Language API client
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path/to/your/credentials.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b4be.json'
 client = language_v1.LanguageServiceClient()
 
 # Define the audio sentiment analysis function

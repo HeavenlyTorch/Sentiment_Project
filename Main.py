@@ -5,11 +5,6 @@ from scraper_visual import show_scraper
 from text_sentiment import show_Text_Sentiment
 from audio_sentiment import show_audio_sentiment
 
-
-def Audio_sentiment():
-    st.title('Audio Sentiment')
-    st.write('Welcome to Audio Sentiment')
-
 def Video_Sentiment():
     st.title('Video Sentiment')
     st.write('Welcome to Video Sentiment')
@@ -18,7 +13,7 @@ def Video_Sentiment():
 pages = {
     "Review Scraper": show_scraper,
     "Text Sentiment": show_Text_Sentiment,
-    "Audio Sentiment": Audio_sentiment,
+    "Audio Sentiment": show_audio_sentiment,
     "Video Sentiment": Video_Sentiment
 }
 
