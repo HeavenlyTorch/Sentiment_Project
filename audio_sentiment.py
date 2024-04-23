@@ -3,6 +3,9 @@ import io
 import streamlit as st
 from google.cloud import language_v1
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+import json
+import websockets
+import matplotlib.pyplot as plt
 from pydub import AudioSegment
 import base64
 import time
@@ -10,6 +13,46 @@ import time
 # Set up the Google Cloud Natural Language API client
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b4be.json'
 client = language_v1.LanguageServiceClient()
+
+# Audio processor for handling audio frames received via WebRTC
+# Define the audio processing function for the WebRTC stream
+class AudioProcessor(AudioProcessorBase):
+    def __init__(self):
+        super().__init__()
+        self.sentiment_score = 0
+        self.sentiment_magnitude = 0
+
+    def visualize_audio(self, audio_data):
+        plt.clf()
+
+        # Create a new figure for the plot
+        Figure, ax = plt.subplots(figsize=(10, 2))
+        ax.plot(audio_data, color='blue')
+        ax.set_title("Real time Audio Waveform")
+        ax.set_xlabel("Samples")
+        ax.set_ylabel("Amplitude")
+
+        # Ensure the plot updates in the Streamlit interface
+        st.pyplot(Figure)
+
+    def recv(self, frame):
+        # Perform sentiment analysis on the audio frame
+        sentiment_score, sentiment_magnitude = analyze_audio_sentiment(frame.to_ndarray())
+
+        # Update the sentiment score and magnitude
+        self.sentiment_score = sentiment_score
+        self.sentiment_magnitude = sentiment_magnitude
+
+        # Visualize the audio waveform
+        st.write("Audio Waveform")
+        st.audio(frame.to_ndarray(), format='audio/wav')
+
+        # Display the sentiment score and magnitude
+        st.write("Sentiment Score:", round(self.sentiment_score, 2))
+        st.write("Sentiment Magnitude:", round(self.sentiment_magnitude, 2))
+
+        # Return the frame to the WebRTC stream
+        return frame
 
 # Define the audio sentiment analysis function
 def analyze_audio_sentiment(audio_data):
@@ -38,33 +81,8 @@ def analyze_audio_sentiment(audio_data):
     sentiment_magnitude = response.document_sentiment.magnitude
     return sentiment_score, sentiment_magnitude
 
-# Define the audio processing function for the WebRTC stream
-class AudioProcessor(AudioProcessorBase):
-    def __init__(self):
-        super().__init__()
-        self.sentiment_score = 0
-        self.sentiment_magnitude = 0
 
-    def recv(self, frame):
-        # Perform sentiment analysis on the audio frame
-        sentiment_score, sentiment_magnitude = analyze_audio_sentiment(frame.to_ndarray())
-
-        # Update the sentiment score and magnitude
-        self.sentiment_score = sentiment_score
-        self.sentiment_magnitude = sentiment_magnitude
-
-        # Visualize the audio waveform
-        st.write("Audio Waveform")
-        st.audio(frame.to_ndarray(), format='audio/wav')
-
-        # Display the sentiment score and magnitude
-        st.write("Sentiment Score:", round(self.sentiment_score, 2))
-        st.write("Sentiment Magnitude:", round(self.sentiment_magnitude, 2))
-
-        # Return the frame to the WebRTC stream
-        return frame
-
-# Define the Streamlit app
+# Streamlit UI setup
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
 
@@ -80,3 +98,14 @@ def show_audio_sentiment():
 # Run the Streamlit app
 if __name__ == '__main__':
     show_audio_sentiment()
+
+
+
+
+
+
+
+
+
+
+
