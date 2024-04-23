@@ -27,3 +27,4 @@ ibm_cloud_sdk_core
 watson_developer_cloud
 google-cloud-language
 google-cloud-speech
+asyncio
