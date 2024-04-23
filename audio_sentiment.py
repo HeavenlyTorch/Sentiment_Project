@@ -52,7 +52,7 @@ def setup_webrtc():
         key="audio_processor",
         mode=WebRtcMode.SENDRECV,
         audio_processor_factory=lambda: AudioProcessor(
-            "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", st.secrets["audio_key"]),
+            "https://storage.googleapis.com/aai-web-samples/news.mp4", st.secrets["audio_key"]),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         media_stream_constraints={"video": False, "audio": True}
     )
