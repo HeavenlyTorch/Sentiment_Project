@@ -52,7 +52,7 @@ def setup_webrtc():
         key="audio_processor",
         mode=WebRtcMode.SENDRECV,
         audio_processor_factory=lambda: AudioProcessor(
-            "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", st.secrets["key"]),
+            "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000", st.secrets["audio_key"]),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         media_stream_constraints={"video": False, "audio": True}
     )
@@ -75,4 +75,5 @@ def show_audio_sentiment():
 
 
 # Display the app
-show_audio_sentiment()
+if __name__ == "__main__":
+    show_audio_sentiment()
