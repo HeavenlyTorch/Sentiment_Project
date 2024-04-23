@@ -27,16 +27,12 @@ class AudioProcessor(AudioProcessorBase):
         self.auth_key = auth_key
 
     async def connect_websocket(self):
-        try:
-            self.ws = await websockets.connect(
-                self.websocket_url,
-                extra_headers=(("Authorization", self.auth_key),),
-                ping_interval=5,
-                ping_timeout=20
-            )
-            print("WebSocket connected")
-        except Exception as e:
-            print(f"Failed to connect WebSocket: {e}")
+        self.ws = await websockets.connect(
+            self.websocket_url,
+            extra_headers=(("Authorization", self.auth_key),),
+            ping_interval=5,
+            ping_timeout=20
+        )
 
     async def send_audio_data(self, audio_data):
         if self.ws is not None:
