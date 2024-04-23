@@ -21,10 +21,10 @@ def load_lottieurl(url: str):
 
 # Audio processor for handling audio frames received via WebRTC
 class AudioProcessor(AudioProcessorBase):
-    def __init__(self, websocket_url, auth_key):
+    def __init__(self, websocket_url, AUDIO_KEY):
         self.ws = None
         self.websocket_url = websocket_url
-        self.auth_key = auth_key
+        self.auth_key = AUDIO_KEY
 
     async def connect_websocket(self):
         try:
