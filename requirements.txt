@@ -21,3 +21,4 @@ requests
 streamlit_lottie
 streamlit-webrtc
 websockets
+assemblyai
