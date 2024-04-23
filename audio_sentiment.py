@@ -2,7 +2,8 @@ import asyncio
 import json
 import streamlit as st
 import websockets
-from streamlit_lottie import st_lottie
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import requests
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
 import numpy as np
@@ -21,10 +22,22 @@ def load_lottieurl(url: str):
 
 # Audio processor for handling audio frames received via WebRTC
 class AudioProcessor(AudioProcessorBase):
-    def __init__(self, websocket_url, auth_key):
-        self.ws = None
-        self.websocket_url = websocket_url
-        self.auth_key = auth_key
+    def recv(self, frame):
+        audio = np.array(frame.to_ndarray(format="f32"))
+        self.visualize_audio(audio)
+        return frame
+
+    def visualize_audio(self, audio_data):
+        # Create a figure for the plot
+        fig = Figure(figsize=(10, 4))
+        ax = fig.subplots()
+        ax.plot(audio_data, color='blue')
+        ax.set_title("Real-time Audio Waveform")
+        ax.set_xlabel("Samples")
+        ax.set_ylabel("Amplitude")
+
+        # Streamlit does not directly support figures, so we need to render it to an image
+        st.pyplot(fig)
 
     async def connect_websocket(self):
         self.ws = await websockets.connect(
@@ -64,10 +77,6 @@ def setup_webrtc():
 # Streamlit UI setup
 def show_audio_sentiment():
     st.title('Live audio sentiment')
-    voice_animation = load_lottieurl("https://assets4.lottiefiles.com/packages/lf20_owkzfxim.json")
-
-    if voice_animation:
-        st_lottie(voice_animation, height=500)
 
     webrtc_ctx = setup_webrtc()
     if webrtc_ctx.state.playing:
