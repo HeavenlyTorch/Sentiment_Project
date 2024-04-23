@@ -18,7 +18,7 @@ def Video_Sentiment():
 pages = {
     "Review Scraper": show_scraper,
     "Text Sentiment": show_Text_Sentiment,
-    "Audio Sentiment": show_audio_sentiment,
+    "Audio Sentiment": Audio_sentiment,
     "Video Sentiment": Video_Sentiment
 }
 
