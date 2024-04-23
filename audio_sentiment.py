@@ -21,35 +21,43 @@ class AudioProcessor(AudioProcessorBase):
         super().__init__()
         self.sentiment_score = 0
         self.sentiment_magnitude = 0
+        self.audio_data = None
+        self.figure = None
 
-    def visualize_audio(self, audio_data):
-        plt.clf()
-
+    def visualize_audio(self):
         # Create a new figure for the plot
-        Figure, ax = plt.subplots(figsize=(10, 2))
-        ax.plot(audio_data, color='blue')
+        self.figure = plt.figure(figsize=(10, 2))
+        ax = self.figure.add_subplot(111)
+        ax.plot(self.audio_data, color='blue')
         ax.set_title("Real time Audio Waveform")
         ax.set_xlabel("Samples")
         ax.set_ylabel("Amplitude")
 
-        # Ensure the plot updates in the Streamlit interface
-        st.pyplot(Figure)
-
     def recv(self, frame):
+        # Save the audio data for later use
+        self.audio_data = frame.to_ndarray()
+
         # Perform sentiment analysis on the audio frame
-        sentiment_score, sentiment_magnitude = analyze_audio_sentiment(frame.to_ndarray())
+        sentiment_score, sentiment_magnitude = analyze_audio_sentiment(self.audio_data)
 
         # Update the sentiment score and magnitude
         self.sentiment_score = sentiment_score
         self.sentiment_magnitude = sentiment_magnitude
 
         # Visualize the audio waveform
-        st.write("Audio Waveform")
-        st.audio(frame.to_ndarray(), format='audio/wav')
+        if self.figure is None:
+            self.visualize_audio()
+        else:
+            ax = self.figure.get_axes()[0]
+            ax.clear()
+            ax.plot(self.audio_data, color='blue')
 
         # Display the sentiment score and magnitude
         st.write("Sentiment Score:", round(self.sentiment_score, 2))
         st.write("Sentiment Magnitude:", round(self.sentiment_magnitude, 2))
+
+        # Display the audio waveform
+        st.pyplot(self.figure)
 
         # Return the frame to the WebRTC stream
         return frame
@@ -81,7 +89,6 @@ def analyze_audio_sentiment(audio_data):
     sentiment_magnitude = response.document_sentiment.magnitude
     return sentiment_score, sentiment_magnitude
 
-
 # Streamlit UI setup
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
@@ -98,14 +105,3 @@ def show_audio_sentiment():
 # Run the Streamlit app
 if __name__ == '__main__':
     show_audio_sentiment()
-
-
-
-
-
-
-
-
-
-
-
