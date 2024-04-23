@@ -36,7 +36,7 @@ class AudioProcessor(AudioProcessorBase):
         # Create a new figure for the plot
         fig, ax = plt.subplots(figsize=(10, 2))
         ax.plot(audio_data, color='blue')
-        ax.set_title("Real-time Audio Waveform")
+        ax.set_title("Real time Audio Waveform")
         ax.set_xlabel("Samples")
         ax.set_ylabel("Amplitude")
 
