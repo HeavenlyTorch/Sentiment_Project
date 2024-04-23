@@ -25,4 +25,4 @@ assemblyai
 ibm_watson
 ibm_cloud_sdk_core
 watson_developer_cloud
-google-cloud
+google-cloud-language
