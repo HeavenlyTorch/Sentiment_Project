@@ -19,10 +19,17 @@ client = language_v1.LanguageServiceClient()
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
-        self.sentiment_score = 0
-        self.sentiment_magnitude = 0
-        self.audio_data = None
-        self.figure = None
+
+    def recv(self, frame):
+        # Perform sentiment analysis on the audio frame
+        sentiment_score, sentiment_magnitude = analyze_audio_sentiment(frame.to_ndarray())
+
+        # Display the sentiment score and magnitude
+        st.write("Sentiment Score:", round(sentiment_score, 2))
+        st.write("Sentiment Magnitude:", round(sentiment_magnitude, 2))
+
+        # Return the frame to the WebRTC stream
+        return frame
 
     def visualize_audio(self):
         # Create a new figure for the plot
