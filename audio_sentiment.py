@@ -49,10 +49,10 @@ class AudioProcessor(AudioProcessorBase):
 # Setup for WebRTC streamer
 def setup_webrtc():
     webrtc_ctx = webrtc_streamer(
-        key="audio_processor",
+        key="aai.settings.api_key",
         mode=WebRtcMode.SENDRECV,
         audio_processor_factory=lambda: AudioProcessor(
-            "https://storage.googleapis.com/aai-web-samples/news.mp4", st.secrets["audio_key"]),
+            "https://storage.googleapis.com/aai-web-samples/news.mp4", st.secrets["aai.settings.api_key"]),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         media_stream_constraints={"video": False, "audio": True}
     )
