@@ -22,21 +22,25 @@ def load_lottieurl(url: str):
 
 # Audio processor for handling audio frames received via WebRTC
 class AudioProcessor(AudioProcessorBase):
+    def __init__(self):
+        super().__init__()
     def recv(self, frame):
         audio = np.array(frame.to_ndarray(format="f32"))
         self.visualize_audio(audio)
         return frame
 
     def visualize_audio(self, audio_data):
-        # Create a figure for the plot
-        fig = Figure(figsize=(10, 4))
-        ax = fig.subplots()
+        # Clear the previous plot to avoid memory leak and redundant drawings
+        plt.clf()
+
+        # Create a new figure for the plot
+        fig, ax = plt.subplots(figsize=(10, 2))
         ax.plot(audio_data, color='blue')
         ax.set_title("Real-time Audio Waveform")
         ax.set_xlabel("Samples")
         ax.set_ylabel("Amplitude")
 
-        # Streamlit does not directly support figures, so we need to render it to an image
+        # Ensure the plot updates in the Streamlit interface
         st.pyplot(fig)
 
     async def connect_websocket(self):
@@ -76,15 +80,17 @@ def setup_webrtc():
 
 # Streamlit UI setup
 def show_audio_sentiment():
-    st.title('Live audio sentiment')
+    st.title("Real-time Voice Waveform")
+    st.write("This app captures your voice and displays the waveform in real-time.")
 
-    webrtc_ctx = setup_webrtc()
-    if webrtc_ctx.state.playing:
-        st.text("Listening...")
-    else:
-        st.text("Click start above to start listening.")
+    # Define the audio processor factory without parameters
+    webrtc_ctx = webrtc_streamer(
+        key="audio",
+        mode=WebRtcMode.SENDRECV,
+        audio_processor_factory=AudioProcessor,  # Pass class directly without instantiation
+        media_stream_constraints={"video": False, "audio": True},
+        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+    )
 
-
-# Display the app
 if __name__ == "__main__":
     show_audio_sentiment()
