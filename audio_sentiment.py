@@ -47,11 +47,9 @@ class AudioProcessor(AudioProcessorBase):
             sentiment_score = sentiment_response.document_sentiment.score
             sentiment_magnitude = sentiment_response.document_sentiment.magnitude
 
-            st.write("Transcript:", transcript)
-            st.write("Sentiment Score:", sentiment_score)
-            st.write("Sentiment Magnitude:", sentiment_magnitude)
 
-def show_audio_sentiment():
+
+def show_audio_sentiment(transcript, sentiment_score, sentiment_magnitude):
     st.title("Audio Sentiment Analysis")
     webrtc_streamer(
         key="audio_processor",
@@ -61,5 +59,8 @@ def show_audio_sentiment():
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
     )
 
+    st.write("Transcript:", transcript)
+    st.write("Sentiment Score:", sentiment_score)
+    st.write("Sentiment Magnitude:", sentiment_magnitude)
 if __name__ == '__main__':
     show_audio_sentiment()
