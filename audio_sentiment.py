@@ -61,7 +61,7 @@ def setup_webrtc():
         audio_processor_factory=lambda: AudioProcessor("wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000",
                                                        aai.settings.api_key),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-        media_stream_constraints={"video": False, "audio": True}
+        media_stream_constraints={"video": True, "audio": True}
     )
 
     return webrtc_ctx
