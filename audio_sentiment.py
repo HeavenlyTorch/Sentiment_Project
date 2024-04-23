@@ -10,6 +10,7 @@ import pybase64
 import assemblyai as aai
 
 aai.settings.api_key = "62525f1b2bc7436baecf9085bc076f53"
+websocket_url= "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
 # Load animation function
 def load_lottieurl(url: str):
@@ -21,10 +22,10 @@ def load_lottieurl(url: str):
 
 # Audio processor for handling audio frames received via WebRTC
 class AudioProcessor(AudioProcessorBase):
-    def __init__(self, websocket_url, AUDIO_KEY):
+    def __init__(self, websocket_url):
         self.ws = None
         self.websocket_url = websocket_url
-        self.auth_key = AUDIO_KEY
+        self.auth_key = aai.settings.api_key
 
     async def connect_websocket(self):
         try:
@@ -58,10 +59,9 @@ def setup_webrtc():
     webrtc_ctx = webrtc_streamer(
         key="audio_processor",
         mode=WebRtcMode.SENDRECV,
-        audio_processor_factory=lambda: AudioProcessor("wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000",
-                                                       aai.settings.api_key),
+        audio_processor_factory=lambda: AudioProcessor(websocket_url + aai.settings.api_key),
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-        media_stream_constraints={"video": True, "audio": True}
+        media_stream_constraints={"video": False, "audio": True}
     )
 
     return webrtc_ctx
