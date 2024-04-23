@@ -16,44 +16,34 @@ class AudioProcessor(AudioProcessorBase):
         super().__init__()
         self.figure, self.ax = plt.subplots(figsize=(10, 2))
 
-    async def recv(self, frame):
+    def recv(self, frame):
         audio_data = np.array(frame.to_ndarray(format="f32"))
 
-        # Update UI from main thread
-        asyncio.run_coroutine_threadsafe(self.update_ui(audio_data), asyncio.get_event_loop())
+        # Visualization
+        self.ax.clear()
+        self.ax.plot(audio_data, color='blue')
+        self.ax.set_title("Real-time Audio Waveform")
+        self.ax.set_xlabel("Samples")
+        self.ax.set_ylabel("Amplitude")
 
-        async def update_ui(self, audio_data):
-            # Update waveform
-            self.ax.clear()
-            self.ax.plot(audio_data, color='blue')
-            self.ax.set_title("Real-time Audio Waveform")
-            self.ax.set_xlabel("Samples")
-            self.ax.set_ylabel("Amplitude")
+        # Convert audio data to the format needed for Google Speech API (if you're processing it)
+        # Convert to text, then sentiment analysis (ensure these are not async or handle them properly if they are)
 
-            # Convert audio data for Google Speech-to-Text
-            audio_bytes = (audio_data * 32767).astype(np.int16).tobytes()
-            audio = speech.RecognitionAudio(content=audio_bytes)
-            config = speech.RecognitionConfig(
-                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-                sample_rate_hertz=16000,
-                language_code="en-US"
-            )
+        # Dummy sentiment values for demonstration
+        sentiment_score = 0.5  # Example score
+        sentiment_magnitude = 0.1  # Example magnitude
 
-            # Async call to Google Speech-to-Text
-            response = await speech_client.recognize(config=config, audio=audio)
-            transcript = response.results[0].alternatives[0].transcript if response.results else "No speech detected."
+        # Use st.session_state to store data if needed
+        st.session_state['last_frame'] = frame
+        st.session_state['sentiment_score'] = sentiment_score
+        st.session_state['sentiment_magnitude'] = sentiment_magnitude
 
-            # Perform sentiment analysis on the transcript
-            document = language_v1.Document(content=transcript, type_=language_v1.Document.Type.PLAIN_TEXT)
-            sentiment_response = await language_client.analyze_sentiment(request={'document': document})
-            sentiment_score = sentiment_response.document_sentiment.score
-            sentiment_magnitude = sentiment_response.document_sentiment.magnitude
+        # Update UI
+        st.write("Sentiment Score:", sentiment_score)
+        st.write("Sentiment Magnitude:", sentiment_magnitude)
+        st.pyplot(self.figure)
 
-            # Display results
-            st.pyplot(self.figure)
-            st.write("Transcript:", transcript)
-            st.write("Sentiment Score:", sentiment_score)
-            st.write("Sentiment Magnitude:", sentiment_magnitude)
+        return frame
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
