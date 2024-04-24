@@ -13,13 +13,13 @@ LANGUAGE_CLIENT = language_v1.LanguageServiceClient()
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
-        self.buffer = []
 
     def recv_queued(self, frames):
         frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
-        self.buffer.extend(frame_list)
-        if self.buffer:
-            self.visualize_audio(np.concatenate(self.buffer))
+        if frame_list:
+            audio_data = np.concatenate(frame_list)
+            self.visualize_audio(audio_data)
+            self.process_audio(audio_data)
         return frames
 
     def visualize_audio(self, audio_data):
@@ -31,11 +31,7 @@ class AudioProcessor(AudioProcessorBase):
         plt.grid(True)
         st.pyplot(plt)
 
-def process_audio(audio_processor):
-    if audio_processor.buffer:
-        audio_data = np.concatenate(audio_processor.buffer)
-        audio_processor.buffer = []
-
+    def process_audio(self, audio_data):
         # Convert audio to text
         audio = speech.RecognitionAudio(content=audio_data.tobytes())
         config = speech.RecognitionConfig(
@@ -52,14 +48,12 @@ def process_audio(audio_processor):
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
-    audio_processor = AudioProcessor()
     webrtc_streamer(key="audio_processor",
                     mode=WebRtcMode.SENDRECV,
-                    audio_processor_factory=lambda: audio_processor,
+                    audio_processor_factory=AudioProcessor,
                     media_stream_constraints={"video": False, "audio": True},
                     rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
-    if st.button("Process Sentiment"):
-        process_audio(audio_processor)
+
 
 if __name__ == '__main__':
     show_audio_sentiment()
