@@ -13,14 +13,19 @@ LANGUAGE_CLIENT = language_v1.LanguageServiceClient()
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
+        self.buffer = []
 
     def recv_queued(self, frames):
         frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
         if frame_list:
-            audio_data = np.concatenate(frame_list)
+            self.buffer.extend(frame_list)  # Buffering the audio data
+
+    def process_buffer(self):
+        if self.buffer:
+            audio_data = np.concatenate(self.buffer)
             self.visualize_audio(audio_data)
             self.process_audio(audio_data)
-        return frames
+            self.buffer = []  # Clear buffer after processing
 
     def visualize_audio(self, audio_data):
         plt.figure(figsize=(10, 2))
@@ -46,13 +51,20 @@ class AudioProcessor(AudioProcessorBase):
         sentiment = LANGUAGE_CLIENT.analyze_sentiment(document=document).document_sentiment
         st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
 
+
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
-    webrtc_streamer(key="audio_processor",
-                    mode=WebRtcMode.SENDRECV,
-                    audio_processor_factory=AudioProcessor,
-                    media_stream_constraints={"video": False, "audio": True},
-                    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+    audio_processor = AudioProcessor()
+    ctx = webrtc_streamer(key="audio_processor",
+                          mode=WebRtcMode.SENDRECV,
+                          audio_processor_factory=lambda: audio_processor,
+                          media_stream_constraints={"video": False, "audio": True},
+                          rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+
+    if st.button("Stop and Analyze Audio"):
+        if ctx.state.playing:
+            ctx.stop()
+            audio_processor.process_buffer()
 
 
 if __name__ == '__main__':
