@@ -19,19 +19,23 @@ class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
         self.figure, self.ax = plt.subplots(figsize=(10, 2))
+        self.sentiment_score = 0
+        self.sentiment_magnitude = 0
         print("Audio Processor Initialized")  # Debug statement
 
-    def recv(self, frame):
-        print("Frame received")  # Debug statement
-        audio_data = np.array(frame.to_ndarray(format="f32"))
-        if audio_data.size == 0:
-            print("Received empty frame.")  # Debug statement
+    def recv_queued(self, frames):
+        print("Frames received")  # Debug statement
+        frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
+        if len(frame_list) == 0:
+            print("Received empty frames.")  # Debug statement
         else:
-            print("Processing non-empty audio frame.")  # Debug statement
+            print("Processing non-empty audio frames.")  # Debug statement
 
         # Proceed to visualize and analyze if data is present
-        self.visualize_audio(audio_data)
-        return frame
+        for audio_data in frame_list:
+            self.visualize_audio(audio_data)
+            self.analyze_sentiment(audio_data)
+        return frames
 
     def visualize_audio(self, audio_data):
         self.ax.clear()
@@ -41,6 +45,27 @@ class AudioProcessor(AudioProcessorBase):
         self.ax.set_ylabel("Amplitude")
         st.pyplot(self.figure)
 
+    def analyze_sentiment(self, audio_data):
+        # Convert the audio data to text using the Google Cloud Speech API
+        text = self.speech_to_text(audio_data)
+
+        # Perform sentiment analysis on the text using the Google Cloud Natural Language API
+        sentiment_score, sentiment_magnitude = self.language_client.analyze_sentiment(request={"document": {"content": text, "type": "PLAIN_TEXT"}})
+        return sentiment_score.value, sentiment_magnitude.value
+
+    def speech_to_text(self, audio_data):
+        # Configure the Google Cloud Speech API request
+        audio = speech.RecognitionAudio(content=audio_data.tobytes())
+        config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16, sample_rate_hertz=16000, language_code="en-US")
+
+        # Perform speech-to-text conversion
+        response = speech_client.recognize(request={"audio": audio, "config": config})
+
+        # Extract the text from the response
+        text = ""
+        for result in response.results:
+            text += result.alternatives.transcript
+        return text
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
