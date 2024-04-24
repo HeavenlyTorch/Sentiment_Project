@@ -18,35 +18,37 @@ class AudioProcessor(AudioProcessorBase):
     def recv_queued(self, frames):
         frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
         self.buffer.extend(frame_list)
+        if self.buffer:
+            self.visualize_audio(np.concatenate(self.buffer))
         return frames
 
-    def process_buffer(self):
-        if self.buffer:
-            audio_data = np.concatenate(self.buffer)
-            self.buffer = []
+    def visualize_audio(self, audio_data):
+        plt.figure(figsize=(10, 2))
+        plt.plot(audio_data, color='blue')
+        plt.title("Real-time Audio Waveform")
+        plt.xlabel("Samples")
+        plt.ylabel("Amplitude")
+        plt.grid(True)
+        st.pyplot(plt)
 
-            # Visualize audio waveform
-            fig, ax = plt.subplots(figsize=(10, 2))
-            ax.plot(audio_data, color='blue')
-            ax.set_title("Real-time Audio Waveform")
-            ax.set_xlabel("Samples")
-            ax.set_ylabel("Amplitude")
-            st.pyplot(fig)
+def process_audio(audio_processor):
+    if audio_processor.buffer:
+        audio_data = np.concatenate(audio_processor.buffer)
+        audio_processor.buffer = []
 
-            # Convert audio to text
-            audio = speech.RecognitionAudio(content=audio_data.tobytes())
-            config = speech.RecognitionConfig(
-                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-                sample_rate_hertz=16000,
-                language_code="en-US")
-            response = SPEECH_CLIENT.recognize(request={"audio": audio, "config": config})
-            text = ' '.join(result.alternatives[0].transcript for result in response.results)
+        # Convert audio to text
+        audio = speech.RecognitionAudio(content=audio_data.tobytes())
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            sample_rate_hertz=16000,
+            language_code="en-US")
+        response = SPEECH_CLIENT.recognize(request={"audio": audio, "config": config})
+        text = ' '.join(result.alternatives[0].transcript for result in response.results)
 
-            # Analyze sentiment
-            document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
-            sentiment = LANGUAGE_CLIENT.analyze_sentiment(document=document).document_sentiment
-            st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
-
+        # Analyze sentiment
+        document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
+        sentiment = LANGUAGE_CLIENT.analyze_sentiment(document=document).document_sentiment
+        st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
@@ -56,8 +58,8 @@ def show_audio_sentiment():
                     audio_processor_factory=lambda: audio_processor,
                     media_stream_constraints={"video": False, "audio": True},
                     rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
-    if st.button("Process Audio"):
-        audio_processor.process_buffer()
+    if st.button("Process Sentiment"):
+        process_audio(audio_processor)
 
 if __name__ == '__main__':
     show_audio_sentiment()
