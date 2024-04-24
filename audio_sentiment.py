@@ -8,6 +8,12 @@ from pusher_config import notify_client
 def show_audio_sentiment():
     st.title('Real-time Audio Recorder and Sentiment Analysis')
 
+    record_btn = st.button('Record Audio')
+    stop_btn = st.button('Stop and Process')
+
+    # Component to handle real-time audio data
+    audio_data = st.empty()
+
     components.html("""
             <script>
                 var recorder, stream;
