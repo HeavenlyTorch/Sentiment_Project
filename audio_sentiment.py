@@ -4,6 +4,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from google.cloud import speech, language_v1
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+import logging
 
 # Environment variables and constants
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b4be.json'
@@ -54,14 +55,18 @@ class AudioProcessor(AudioProcessorBase):
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
-    audio_processor = AudioProcessor()
-    ctx = webrtc_streamer(key="audio_processor",
-                          mode=WebRtcMode.SENDRECV,
-                          audio_processor_factory=lambda: audio_processor,
-                          media_stream_constraints={"video": False, "audio": True})
-
-    if st.button("Analyze Buffered Audio"):
-        audio_processor.process_buffer()
+    try:
+        audio_processor = AudioProcessor()
+        ctx = webrtc_streamer(key="audio_processor",
+                              mode=WebRtcMode.SENDRECV,
+                              audio_processor_factory=lambda: audio_processor,
+                              media_stream_constraints={"video": False, "audio": True},
+                              rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+        if st.button("Analyze Buffered Audio"):
+            audio_processor.process_buffer()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        logging.exception("Caught an error in the main processing loop")
 
 
 if __name__ == '__main__':
