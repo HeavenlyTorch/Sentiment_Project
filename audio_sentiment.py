@@ -1,6 +1,9 @@
 import os
 import base64
 import streamlit as st
+from websocket_server import WebsocketServer
+import threading
+import json
 from google.cloud import speech, language_v1
 import io
 import wave
@@ -10,12 +13,10 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b
 speech_client = speech.SpeechClient()
 language_client = language_v1.LanguageServiceClient()
 
-
 def analyze_sentiment(text):
     document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
     sentiment = language_client.analyze_sentiment(document=document).document_sentiment
     return sentiment.score, sentiment.magnitude
-
 
 def transcribe_audio(audio_file):
     # Read and close the WAV file
@@ -39,9 +40,31 @@ def transcribe_audio(audio_file):
     transcript = " ".join([result.alternatives[0].transcript for result in response.results])
     return transcript
 
+def new_client(client, server):
+    print("New client connected and was given id %d" % client['id'])
+    server.send_message_to_all("Hey all, a new client has joined us")
+
+def message_received(client, server, message):
+    print("Client(%d) said: %s" % (client['id'], message))
+    audio_content = base64.b64decode(message)
+    transcript = transcribe_audio(audio_content)
+    score, magnitude = analyze_sentiment(transcript)
+    response = json.dumps({"transcript": transcript, "score": score, "magnitude": magnitude})
+    server.send_message(client, response)
+
+def run_websocket_server():
+    port = 6789
+    server = WebsocketServer(port)
+    server.set_fn_new_client(new_client)
+    server.set_fn_message_received(message_received)
+    server.run_forever()
+
+# Run the WebSocket server in a separate thread
+threading.Thread(target=run_websocket_server).start()
 
 def show_audio_sentiment():
-    st.title('Real-time Audio Capture and Sentiment Analysis')
+    st.title("Real-time Audio Analysis with Sentiment")
+    st.write("Connect to WebSocket at ws://127.0.0.1:6789")
 
     # Frontend: Audio recording
     record_btn = st.button('Record Audio')
