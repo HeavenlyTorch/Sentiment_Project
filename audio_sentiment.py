@@ -69,12 +69,6 @@ def show_audio_sentiment():
             st.write(f"Transcript: {transcript}")
             st.write(f"Sentiment Score: {score}, Magnitude: {magnitude}")
 
-def generate_waveform():
-    # This function should generate a matplotlib figure based on the audio data
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    ax.plot([0, 1, 2], [10, 20, 10])  # Simplified example; replace with actual audio data plotting
-    return fig
 
 if __name__ == '__main__':
     show_audio_sentiment()
