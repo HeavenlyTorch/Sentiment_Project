@@ -4,66 +4,61 @@ from audio_processing import transcribe_audio, analyze_sentiment
 from pusher_config import notify_client
 
 def show_audio_sentiment():
-    st.title('Real-time Audio Analysis with Sentiment')
+    st.title('Real-time Audio Recorder and Sentiment Analysis')
+    record_btn = st.button('Record Audio')
+    stop_btn = st.button('Stop and Process')
 
-    # Setup frontend UI
-    with st.form("my_form"):
-        start_btn = st.form_submit_button('Start Recording')
-        stop_btn = st.form_submit_button('Stop Recording')
+    if record_btn:
+        st.session_state['record'] = True
 
-    # Placeholder for audio waveform and sentiment output
-    waveform_placeholder = st.empty()
-    sentiment_placeholder = st.empty()
+    if stop_btn and 'record' in st.session_state and st.session_state['record']:
+        st.session_state['record'] = False
+        audio_data = st.session_state.get('audio_data', None)
+        if audio_data:
+            transcript = transcribe_audio(audio_data)
+            score, magnitude = analyze_sentiment(transcript)
+            st.write('Transcript:', transcript)
+            st.write('Sentiment score:', score, 'Magnitude:', magnitude)
 
-    # Embed custom HTML and JavaScript for audio recording
     components.html("""
-            <button onclick="startRecording()">Start Recording</button>
-            <button onclick="stopRecording()">Stop Recording</button>
             <script>
-                var mediaRecorder;
-                var audioChunks = [];
+                const recordButton = document.querySelector('button[data-testid="stButton"][aria-label="Record Audio"]');
+                const stopButton = document.querySelector('button[data-testid="stButton"][aria-label="Stop and Process"]');
 
-                function startRecording() {
-                    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                        mediaRecorder = new MediaRecorder(stream);
-                        mediaRecorder.start();
-                        audioChunks = [];
+                recordButton.onclick = null;
+                stopButton.onclick = null;
 
-                        mediaRecorder.addEventListener("dataavailable", event => {
-                            audioChunks.push(event.data);
-                        });
-
-                        mediaRecorder.addEventListener("stop", () => {
-                            const audioBlob = new Blob(audioChunks);
-                            const audioUrl = URL.createObjectURL(audioBlob);
-                            const audio = new Audio(audioUrl);
-                            audio.play();
-                        });
-                    });
+                var recorder, stream;
+                async function startRecording() {
+                    stream = await navigator.mediaDevices.getUserMedia({audio: true});
+                    recorder = new MediaRecorder(stream);
+                    var chunks = [];
+                    recorder.ondataavailable = e => {
+                        chunks.push(e.data);
+                    };
+                    recorder.onstop = e => {
+                        var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+                        chunks = [];
+                        var reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = function() {
+                            var base64data = reader.result;
+                            var audio_data = base64data.split(',')[1];
+                            window.parent.postMessage({type: 'streamlit:setComponentValue', key: 'audio_data', value: audio_data}, '*');
+                        }
+                    };
+                    recorder.start();
                 }
 
                 function stopRecording() {
-                    mediaRecorder.stop();
+                    recorder.stop();
+                    stream.getTracks().forEach(track => track.stop());
                 }
+
+                recordButton.addEventListener('click', startRecording);
+                stopButton.addEventListener('click', stopRecording);
             </script>
-        """, height=150)
-
-    # Process recorded audio if any
-    if start_btn:
-        st.session_state.recording = True
-    if stop_btn:
-        st.session_state.recording = False
-        # Dummy processing functions
-        waveform_placeholder.pyplot(fig=generate_waveform())  # Update this part to display real waveform
-        sentiment_placeholder.write("Dummy sentiment analysis result")  # Update with real analysis
-
-
-def generate_waveform():
-    # This function should generate a matplotlib figure based on the audio data
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    ax.plot([0, 1, 2], [10, 20, 10])  # Simplified example; replace with actual audio data plotting
-    return fig
+        """, height=0)
 
     audio_file = st.file_uploader("Upload audio for analysis", type=["wav"])
     if audio_file is not None:
@@ -73,6 +68,13 @@ def generate_waveform():
             notify_client(transcript, score, magnitude)
             st.write(f"Transcript: {transcript}")
             st.write(f"Sentiment Score: {score}, Magnitude: {magnitude}")
+
+def generate_waveform():
+    # This function should generate a matplotlib figure based on the audio data
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot([0, 1, 2], [10, 20, 10])  # Simplified example; replace with actual audio data plotting
+    return fig
 
 if __name__ == '__main__':
     show_audio_sentiment()
