@@ -6,6 +6,7 @@ import streamlit.components.v1 as components
 from audio_processing import transcribe_audio, analyze_sentiment
 from pusher_config import notify_client
 import base64
+import io
 
 def plot_waveform(data, rate):
     """Plot waveform from audio data."""
