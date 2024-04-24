@@ -5,7 +5,7 @@ from google.cloud import speech, language_v1
 import io
 
 # Set up Google Cloud API clients
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path/to/your/google-cloud-service-account-file.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b4be.json'
 speech_client = speech.SpeechClient()
 language_client = language_v1.LanguageServiceClient()
 
