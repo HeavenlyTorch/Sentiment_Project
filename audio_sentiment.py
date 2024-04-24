@@ -15,39 +15,50 @@ def show_audio_sentiment():
     audio_data = st.empty()
 
     components.html("""
-            <script>
-                var recorder, stream;
-                const startButton = document.createElement('button');
-                startButton.textContent = 'Start Recording';
-                document.body.appendChild(startButton);
+                <script>
+                    var recorder, stream;
+                    const startButton = document.createElement('button');
+                    startButton.textContent = 'Start Recording';
+                    document.body.appendChild(startButton);
 
-                const stopButton = document.createElement('button');
-                stopButton.textContent = 'Stop Recording';
-                document.body.appendChild(stopButton);
+                    const stopButton = document.createElement('button');
+                    stopButton.textContent = 'Stop Recording';
+                    document.body.appendChild(stopButton);
 
-                startButton.onclick = async () => {
-                    stream = await navigator.mediaDevices.getUserMedia({audio: true});
-                    recorder = new MediaRecorder(stream);
-                    var chunks = [];
-                    recorder.ondataavailable = e => chunks.push(e.data);
-                    recorder.onstop = async () => {
-                        const blob = new Blob(chunks, {'type' : 'audio/wav; codec=pcm'});
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            const base64data = reader.result;
-                            window.parent.postMessage({type: 'audio-data', data: base64data}, '*');
+                    let audio_data_sent = false;
+
+                    startButton.onclick = async () => {
+                        stream = await navigator.mediaDevices.getUserMedia({audio: true});
+                        recorder = new MediaRecorder(stream);
+                        var chunks = [];
+                        recorder.ondataavailable = e => chunks.push(e.data);
+                        recorder.onstop = async () => {
+                            const blob = new Blob(chunks, {'type' : 'audio/wav; codec=pcm'});
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                const base64data = reader.result;
+                                window.parent.postMessage({type: 'audio-data', data: base64data}, '*');
+                                audio_data_sent = true;
+                            };
+                            reader.readAsDataURL(blob);
                         };
-                        reader.readAsDataURL(blob);
+                        recorder.start();
                     };
-                    recorder.start();
-                };
 
-                stopButton.onclick = () => {
-                    recorder.stop();
-                    stream.getTracks().forEach(track => track.stop());
-                };
-            </script>
-        """, height=0)
+                    stopButton.onclick = () => {
+                        recorder.stop();
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    window.addEventListener("message", (event) => {
+                        if (event.data.type === 'audio-data' && audio_data_sent) {
+                            const audio_data = event.data.data;
+                            Streamlit.setComponentValue(audio_data);
+                            audio_data_sent = false;
+                        }
+                    }, false);
+                </script>
+            """, height=0)
 
     # Listen for audio data sent from the frontend
     audio_data = st.session_state.get('audio_data', None)
@@ -69,15 +80,15 @@ def show_audio_sentiment():
 
     # Callback to handle messages from the frontend
     components.html("""
-            <script>
-            window.addEventListener("message", (event) => {
-                if (event.data.type === 'audio-data') {
-                    const audio_data = event.data.data;
-                    Streamlit.setComponentValue(audio_data);
-                }
-            }, false);
-            </script>
-        """, height=0)
+                <script>
+                window.addEventListener("message", (event) => {
+                    if (event.data.type === 'audio-data') {
+                        const audio_data = event.data.data;
+                        Streamlit.setComponentValue(audio_data);
+                    }
+                }, false);
+                </script>
+            """, height=0)
 
     audio_file = st.file_uploader("Upload audio for analysis", type=["wav"])
     if audio_file is not None:
