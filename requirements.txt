@@ -30,3 +30,4 @@ google-cloud-speech
 asyncio
 wave
 websocket_server
+pusher
