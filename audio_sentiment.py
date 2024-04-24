@@ -20,6 +20,7 @@ class AudioProcessor(AudioProcessorBase):
         self.ax.set_title("Real-time Audio Waveform")
         self.ax.set_xlabel("Samples")
         self.ax.set_ylabel("Amplitude")
+        self.line, = self.ax.plot([], color='blue')  # Initialize empty line for updating plot
 
     def recv_queued(self, frames):
         frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
@@ -29,9 +30,10 @@ class AudioProcessor(AudioProcessorBase):
         return frames
 
     def update_plot(self, audio_data):
-        self.ax.clear()
-        self.ax.plot(audio_data, color='blue')
-        st.pyplot(self.figure)
+        self.line.set_data(np.arange(len(audio_data)), audio_data)  # Update plot with new audio data
+        self.ax.relim()  # Update limits of the axes
+        self.ax.autoscale_view()  # Autoscale the axes
+        self.figure.canvas.draw()  # Redraw the canvas
 
     def analyze_and_display_sentiment(self, audio_data):
         text = self.speech_to_text(audio_data)
