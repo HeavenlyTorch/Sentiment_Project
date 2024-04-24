@@ -2,7 +2,7 @@ import streamlit as st
 from audio_processing import transcribe_audio, analyze_sentiment
 from pusher_config import notify_client
 
-def main():
+def show_audio_sentiment():
     st.title('Real-time Audio Analysis with Sentiment')
     audio_file = st.file_uploader("Upload audio for analysis", type=["wav"])
     if audio_file is not None:
@@ -14,4 +14,4 @@ def main():
             st.write(f"Sentiment Score: {score}, Magnitude: {magnitude}")
 
 if __name__ == '__main__':
-    main()
+    show_audio_sentiment()
