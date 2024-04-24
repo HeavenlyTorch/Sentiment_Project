@@ -14,6 +14,9 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b
 speech_client = speech.SpeechClient()
 language_client = language_v1.LanguageServiceClient()
 
+# Set up the Streamlit app
+st.set_page_config(page_title="Audio Sentiment Analysis", page_icon=":headphones:", layout="wide")
+st.title("Audio Sentiment Analysis")
 
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
