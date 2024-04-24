@@ -1,75 +1,55 @@
-import io
 import os
 import numpy as np
 import streamlit as st
+import matplotlib.pyplot as plt
 from google.cloud import speech, language_v1
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
-import matplotlib.pyplot as plt
-import asyncio
 
-# Set up the Streamlit app
-st.set_page_config(page_title="Audio Sentiment Analysis", page_icon=":headphones:", layout="wide")
-st.title("Audio Sentiment Analysis")
-
-# Set the path to the service account key file
+# Environment variables and constants
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'trusty-sentinel-421215-f5581358b4be.json'
-
-# Configure Google Cloud clients
-speech_client = speech.SpeechClient()
-language_client = language_v1.LanguageServiceClient()
-
+SPEECH_CLIENT = speech.SpeechClient()
+LANGUAGE_CLIENT = language_v1.LanguageServiceClient()
 
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
         self.figure, self.ax = plt.subplots(figsize=(10, 2))
-        self.sentiment_score = 0
-        self.sentiment_magnitude = 0
-        print("Audio Processor Initialized")  # Debug statement
+        self.init_plot()
 
-    def recv_queued(self, frames):
-        print("Frames received")  # Debug statement
-        frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
-        if len(frame_list) == 0:
-            print("Received empty frames.")  # Debug statement
-        else:
-            print("Processing non-empty audio frames.")  # Debug statement
-
-        # Proceed to visualize and analyze if data is present
-        for audio_data in frame_list:
-            self.visualize_audio(audio_data)
-            self.analyze_sentiment(audio_data)
-        return frames
-
-    def visualize_audio(self, audio_data):
-        self.ax.clear()
-        self.ax.plot(audio_data, color='blue')
+    def init_plot(self):
         self.ax.set_title("Real-time Audio Waveform")
         self.ax.set_xlabel("Samples")
         self.ax.set_ylabel("Amplitude")
+
+    def recv_queued(self, frames):
+        frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
+        for audio_data in frame_list:
+            self.update_plot(audio_data)
+            self.analyze_and_display_sentiment(audio_data)
+        return frames
+
+    def update_plot(self, audio_data):
+        self.ax.clear()
+        self.ax.plot(audio_data, color='blue')
         st.pyplot(self.figure)
 
-    def analyze_sentiment(self, audio_data):
-        # Convert the audio data to text using the Google Cloud Speech API
+    def analyze_and_display_sentiment(self, audio_data):
         text = self.speech_to_text(audio_data)
-
-        # Perform sentiment analysis on the text using the Google Cloud Natural Language API
-        sentiment_score, sentiment_magnitude = self.language_client.analyze_sentiment(request={"document": {"content": text, "type": "PLAIN_TEXT"}})
-        return sentiment_score.value, sentiment_magnitude.value
+        sentiment = self.analyze_sentiment(text)
+        st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
 
     def speech_to_text(self, audio_data):
-        # Configure the Google Cloud Speech API request
         audio = speech.RecognitionAudio(content=audio_data.tobytes())
-        config = speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16, sample_rate_hertz=16000, language_code="en-US")
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            sample_rate_hertz=16000,
+            language_code="en-US")
+        response = SPEECH_CLIENT.recognize(request={"audio": audio, "config": config})
+        return ' '.join(result.alternatives[0].transcript for result in response.results)
 
-        # Perform speech-to-text conversion
-        response = speech_client.recognize(request={"audio": audio, "config": config})
-
-        # Extract the text from the response
-        text = ""
-        for result in response.results:
-            text += result.alternatives.transcript
-        return text
+    def analyze_sentiment(self, text):
+        response = LANGUAGE_CLIENT.analyze_sentiment(request={"document": {"content": text, "type": "PLAIN_TEXT"}})
+        return response.document_sentiment
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
