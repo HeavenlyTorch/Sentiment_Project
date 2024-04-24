@@ -1,64 +1,100 @@
 import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.io import wavfile
 import streamlit.components.v1 as components
 from audio_processing import transcribe_audio, analyze_sentiment
 from pusher_config import notify_client
+import base64
+
+def plot_waveform(data, rate):
+    """Plot waveform from audio data."""
+    plt.figure(figsize=(10, 3))
+    times = np.arange(len(data)) / float(rate)
+    plt.fill_between(times, data, color='skyblue')
+    plt.xlim(times[0], times[-1])
+    plt.xlabel('Time (s)')
+    plt.ylabel('Amplitude')
+    plt.title('Waveform')
+    return plt
 
 def show_audio_sentiment():
-    st.title('Real-time Audio Recorder and Sentiment Analysis')
-    record_btn = st.button('Record Audio')
-    stop_btn = st.button('Stop and Process')
+    st.title('Live Audio Capture and Sentiment Analysis')
 
-    if record_btn:
-        st.session_state['record'] = True
+    # Placeholder for the waveform plot
+    waveform_placeholder = st.empty()
 
-    if stop_btn and 'record' in st.session_state and st.session_state['record']:
-        st.session_state['record'] = False
-        audio_data = st.session_state.get('audio_data', None)
-        if audio_data:
-            transcript = transcribe_audio(audio_data)
-            score, magnitude = analyze_sentiment(transcript)
-            st.write('Transcript:', transcript)
-            st.write('Sentiment score:', score, 'Magnitude:', magnitude)
+    # JavaScript to capture audio and send it to the server
+    audio_capture_js = """
+    <script>
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    let mediaRecorder;
+    let audioChunks = [];
 
-    components.html("""
-            <script>
-                const recordButton = document.querySelector('button[data-testid="stButton"][aria-label="Record Audio"]');
-                const stopButton = document.querySelector('button[data-testid="stButton"][aria-label="Stop and Process"]');
+    recordButton.onclick = () => {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            audioChunks = [];
 
-                recordButton.onclick = null;
-                stopButton.onclick = null;
+            mediaRecorder.addEventListener("dataavailable", event => {
+                audioChunks.push(event.data);
+            });
 
-                var recorder, stream;
-                async function startRecording() {
-                    stream = await navigator.mediaDevices.getUserMedia({audio: true});
-                    recorder = new MediaRecorder(stream);
-                    var chunks = [];
-                    recorder.ondataavailable = e => {
-                        chunks.push(e.data);
-                    };
-                    recorder.onstop = e => {
-                        var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
-                        chunks = [];
-                        var reader = new FileReader();
-                        reader.readAsDataURL(blob);
-                        reader.onloadend = function() {
-                            var base64data = reader.result;
-                            var audio_data = base64data.split(',')[1];
-                            window.parent.postMessage({type: 'streamlit:setComponentValue', key: 'audio_data', value: audio_data}, '*');
-                        }
-                    };
-                    recorder.start();
-                }
+            mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunks);
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64data = reader.result;
+                    window.parent.postMessage({type: 'audio-data', data: base64data}, '*');
+                };
+            });
+        });
+    };
 
-                function stopRecording() {
-                    recorder.stop();
-                    stream.getTracks().forEach(track => track.stop());
-                }
+    stopButton.onclick = () => {
+        mediaRecorder.stop();
+    };
+    </script>
+    <button id="recordButton">Record</button>
+    <button id="stopButton">Stop</button>
+    """
 
-                recordButton.addEventListener('click', startRecording);
-                stopButton.addEventListener('click', stopRecording);
-            </script>
-        """, height=0)
+    st.markdown(audio_capture_js, unsafe_allow_html=True)
+
+    # Listen for audio data sent from the frontend
+    audio_data = st.session_state.get('audio_data', None)
+    if audio_data:
+        # Decode the base64 data to bytes
+        header, encoded = audio_data.split(",", 1)
+        data = base64.b64decode(encoded)
+
+        # Convert bytes to numpy array and plot waveform
+        rate, audio_array = wavfile.read(io.BytesIO(data))
+        plt = plot_waveform(audio_array, rate)
+        waveform_placeholder.pyplot(plt)
+
+    # Callback to handle messages from the frontend
+    st.write(st.session_state.audio_data if 'audio_data' in st.session_state else 'No data received')
+
+    # Listen for messages from the frontend
+    components.html(
+        """
+        <script>
+        window.addEventListener("message", (event) => {
+            if (event.data.type === 'audio-data') {
+                const audio_data = event.data.data;
+                window.parent.postMessage({type: 'audio-data', data: audio_data}, '*');
+            }
+        }, false);
+        </script>
+        """,
+        height=0,
+    )
+
 
     audio_file = st.file_uploader("Upload audio for analysis", type=["wav"])
     if audio_file is not None:
