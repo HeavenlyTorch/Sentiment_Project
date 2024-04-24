@@ -58,13 +58,10 @@ def show_audio_sentiment():
     ctx = webrtc_streamer(key="audio_processor",
                           mode=WebRtcMode.SENDRECV,
                           audio_processor_factory=lambda: audio_processor,
-                          media_stream_constraints={"video": False, "audio": True},
-                          rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+                          media_stream_constraints={"video": False, "audio": True})
 
-    if st.button("Stop and Analyze Audio"):
-        if ctx.state.playing:
-            ctx.stop()
-            audio_processor.process_buffer()
+    if st.button("Analyze Buffered Audio"):
+        audio_processor.process_buffer()
 
 
 if __name__ == '__main__':
