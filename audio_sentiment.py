@@ -17,16 +17,21 @@ class AudioProcessor(AudioProcessorBase):
         self.buffer = []
 
     def recv_queued(self, frames):
+        # Convert frames to a list of numpy arrays
         frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
         if frame_list:
+            # Extend the internal buffer with new audio data
             self.buffer.extend(frame_list)  # Buffering the audio data
 
     def process_buffer(self):
         if self.buffer:
+            # Concatenate all buffered audio data
             audio_data = np.concatenate(self.buffer)
-            self.visualize_audio(audio_data)
-            self.process_audio(audio_data)
             self.buffer = []  # Clear buffer after processing
+            self.visualize_audio(audio_data)
+            return self.process_audio(audio_data)
+        else:
+            return None, None  # Clear buffer after processing
 
     def visualize_audio(self, audio_data):
         plt.figure(figsize=(10, 2))
@@ -45,28 +50,31 @@ class AudioProcessor(AudioProcessorBase):
             sample_rate_hertz=16000,
             language_code="en-US")
         response = SPEECH_CLIENT.recognize(request={"audio": audio, "config": config})
+        if not response.results:
+            st.write("No speech was detected.")
+            return None, None
         text = ' '.join(result.alternatives[0].transcript for result in response.results)
 
-        # Analyze sentiment
+        # Analyze sentiment using Google Natural Language API
         document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
         sentiment = LANGUAGE_CLIENT.analyze_sentiment(document=document).document_sentiment
-        st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
+        return sentiment.score, sentiment.magnitude
 
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
-    try:
-        audio_processor = AudioProcessor()
-        ctx = webrtc_streamer(key="audio_processor",
-                              mode=WebRtcMode.SENDRECV,
-                              audio_processor_factory=lambda: audio_processor,
-                              media_stream_constraints={"video": False, "audio": True},
-                              rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
-        if st.button("Analyze Buffered Audio"):
-            audio_processor.process_buffer()
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        logging.exception("Caught an error in the main processing loop")
+    audio_processor = AudioProcessor()
+    webrtc_streamer(key="audio_processor",
+                    mode=WebRtcMode.SENDRECV,
+                    audio_processor_factory=lambda: audio_processor,
+                    media_stream_constraints={"video": False, "audio": True})
+
+    if st.button("Analyze Buffered Audio"):
+        score, magnitude = audio_processor.process_buffer()
+        if score is not None and magnitude is not None:
+            st.write(f"Sentiment Score: {score}, Magnitude: {magnitude}")
+        else:
+            st.write("No data to analyze. Please check if audio was recorded and buffered.")
 
 
 if __name__ == '__main__':
