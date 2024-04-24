@@ -2,10 +2,10 @@ from pusher import Pusher
 
 # Initialize Pusher client
 pusher_client = Pusher(
-    app_id='d8e7f8f7-23e3-4425-b037-29c66b684d99',
-    key='FFF21819C019D9082ED407D94789D2B91820B2EEEB13571481502785C1259E2E',
-    secret='your_app_secret',
-    cluster='your_app_cluster',
+    app_id='1792935',
+    key='20f7d6caed6b5edf6072',
+    secret='ef5254e7091bc69f34b8',
+    cluster='ap2',
     ssl=True
 )
 
