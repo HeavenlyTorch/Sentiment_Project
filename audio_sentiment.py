@@ -13,55 +13,50 @@ LANGUAGE_CLIENT = language_v1.LanguageServiceClient()
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
-        self.figure, self.ax = plt.subplots(figsize=(10, 2))
-        self.init_plot()
-
-    def init_plot(self):
-        self.ax.set_title("Real-time Audio Waveform")
-        self.ax.set_xlabel("Samples")
-        self.ax.set_ylabel("Amplitude")
-        self.line, = self.ax.plot([], color='blue')  # Initialize empty line for updating plot
+        self.buffer = []
 
     def recv_queued(self, frames):
         frame_list = [np.array(frame.to_ndarray(format="f32")) for frame in frames]
-        for audio_data in frame_list:
-            self.update_plot(audio_data)
-            self.analyze_and_display_sentiment(audio_data)
+        self.buffer.extend(frame_list)
         return frames
 
-    def update_plot(self, audio_data):
-        self.line.set_data(np.arange(len(audio_data)), audio_data)  # Update plot with new audio data
-        self.ax.relim()  # Update limits of the axes
-        self.ax.autoscale_view()  # Autoscale the axes
-        self.figure.canvas.draw()  # Redraw the canvas
+def process_audio():
+    if 'audio_processor' in st.session_state and st.session_state.audio_processor.buffer:
+        audio_data = np.concatenate(st.session_state.audio_processor.buffer)
+        st.session_state.audio_processor.buffer = []
 
-    def analyze_and_display_sentiment(self, audio_data):
-        text = self.speech_to_text(audio_data)
-        sentiment = self.analyze_sentiment(text)
-        st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
+        # Visualize audio waveform
+        fig, ax = plt.subplots(figsize=(10, 2))
+        ax.plot(audio_data, color='blue')
+        ax.set_title("Real-time Audio Waveform")
+        ax.set_xlabel("Samples")
+        ax.set_ylabel("Amplitude")
+        st.pyplot(fig)
 
-    def speech_to_text(self, audio_data):
+        # Convert audio to text
         audio = speech.RecognitionAudio(content=audio_data.tobytes())
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=16000,
             language_code="en-US")
         response = SPEECH_CLIENT.recognize(request={"audio": audio, "config": config})
-        return ' '.join(result.alternatives[0].transcript for result in response.results)
+        text = ' '.join(result.alternatives[0].transcript for result in response.results)
 
-    def analyze_sentiment(self, text):
-        response = LANGUAGE_CLIENT.analyze_sentiment(request={"document": {"content": text, "type": "PLAIN_TEXT"}})
-        return response.document_sentiment
+        # Analyze sentiment
+        document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
+        sentiment = LANGUAGE_CLIENT.analyze_sentiment(document=document).document_sentiment
+        st.write(f"Sentiment Score: {sentiment.score}, Magnitude: {sentiment.magnitude}")
+
 
 def show_audio_sentiment():
     st.title("Audio Sentiment Analysis")
-    webrtc_streamer(
-        key="audio_processor",
-        mode=WebRtcMode.SENDRECV,
-        audio_processor_factory=AudioProcessor,
-        media_stream_constraints={"video": False, "audio": True},
-        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-    )
+    st.session_state.audio_processor = AudioProcessor()
+    webrtc_streamer(key="audio_processor",
+                    mode=WebRtcMode.SENDRECV,
+                    audio_processor_factory=lambda: st.session_state.audio_processor,
+                    media_stream_constraints={"video": False, "audio": True},
+                    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+    st.button("Process Audio", on_click=process_audio)
 
 if __name__ == '__main__':
     show_audio_sentiment()
